@@ -35,10 +35,13 @@ const Login: React.FC = () => {
 
   return (
     <div className="min-h-screen flex items-center justify-center bg-gradient-to-br from-blue-50 to-indigo-100 p-4">
-      <Card className="w-full max-w-md">
+      <Card className="w-full max-w-md shadow-xl border-0 bg-white/80 backdrop-blur-sm">
         <CardHeader className="text-center">
-          <CardTitle className="text-2xl font-bold">Welcome Back</CardTitle>
-          <CardDescription>
+          <div className="mx-auto bg-blue-100 p-3 rounded-full w-16 h-16 flex items-center justify-center mb-4">
+            <Mail className="h-8 w-8 text-blue-600" />
+          </div>
+          <CardTitle className="text-2xl font-bold text-gray-900">Welcome Back</CardTitle>
+          <CardDescription className="text-gray-600">
             Sign in to your Food Business account
           </CardDescription>
         </CardHeader>
@@ -46,7 +49,7 @@ const Login: React.FC = () => {
           {!magicLinkSent ? (
             <form onSubmit={handleSendMagicLink} className="space-y-4">
               <div className="space-y-2">
-                <Label htmlFor="email">Email Address</Label>
+                <Label htmlFor="email" className="text-gray-700">Email Address</Label>
                 <Input
                   id="email"
                   type="email"
@@ -54,11 +57,12 @@ const Login: React.FC = () => {
                   value={email}
                   onChange={(e) => setEmail(e.target.value)}
                   required
+                  className="border-gray-300 focus:border-blue-500 focus:ring-blue-500"
                 />
               </div>
               <Button 
                 type="submit" 
-                className="w-full" 
+                className="w-full bg-blue-600 hover:bg-blue-700 text-white"
                 disabled={isLoading}
               >
                 {isLoading ? (
@@ -84,14 +88,14 @@ const Login: React.FC = () => {
               </div>
               
               {/* Mock magic link button for demo */}
-              <div className="pt-4 border-t">
+              <div className="pt-4 border-t border-gray-200">
                 <p className="text-xs text-gray-500 mb-3">
                   For demo purposes, click below to simulate magic link:
                 </p>
                 <Button 
                   onClick={handleMagicLinkLogin}
                   variant="outline"
-                  className="w-full"
+                  className="w-full border-blue-300 text-blue-700 hover:bg-blue-50"
                 >
                   <ArrowRight className="mr-2 h-4 w-4" />
                   Use Magic Link (Demo)
@@ -102,7 +106,7 @@ const Login: React.FC = () => {
                 variant="ghost" 
                 size="sm"
                 onClick={() => setMagicLinkSent(false)}
-                className="text-xs"
+                className="text-xs text-gray-500 hover:text-gray-700"
               >
                 Use different email
               </Button>

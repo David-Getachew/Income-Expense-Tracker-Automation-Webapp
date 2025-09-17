@@ -38,6 +38,7 @@ const Layout: React.FC<LayoutProps> = ({ children }) => {
           variant="outline"
           size="sm"
           onClick={() => setSidebarOpen(!sidebarOpen)}
+          className="bg-white shadow-md"
         >
           {sidebarOpen ? <X className="h-4 w-4" /> : <Menu className="h-4 w-4" />}
         </Button>
@@ -50,7 +51,7 @@ const Layout: React.FC<LayoutProps> = ({ children }) => {
         <div className="flex flex-col h-full">
           {/* Logo */}
           <div className="flex items-center justify-center h-16 px-4 border-b">
-            <h1 className="text-xl font-bold text-gray-900">Food Business</h1>
+            <h1 className="text-xl font-bold text-blue-900">Food Business</h1>
           </div>
 
           {/* Navigation */}
@@ -62,10 +63,10 @@ const Layout: React.FC<LayoutProps> = ({ children }) => {
                   key={item.name}
                   to={item.href}
                   onClick={() => setSidebarOpen(false)}
-                  className={`flex items-center px-4 py-3 text-sm font-medium rounded-lg transition-colors ${
+                  className={`flex items-center px-4 py-3 text-sm font-medium rounded-lg transition-all duration-200 ${
                     isActive(item.href)
-                      ? 'bg-blue-50 text-blue-700 border border-blue-200'
-                      : 'text-gray-600 hover:bg-gray-50 hover:text-gray-900'
+                      ? 'bg-blue-50 text-blue-700 border border-blue-200 shadow-sm'
+                      : 'text-gray-700 hover:bg-gray-100 hover:text-gray-900'
                   }`}
                 >
                   <Icon className="mr-3 h-5 w-5" />
@@ -76,16 +77,16 @@ const Layout: React.FC<LayoutProps> = ({ children }) => {
           </nav>
 
           {/* User info and logout */}
-          <div className="p-4 border-t">
+          <div className="p-4 border-t border-gray-200">
             <div className="mb-3">
-              <p className="text-sm text-gray-600">Logged in as:</p>
+              <p className="text-xs text-gray-500">Logged in as:</p>
               <p className="text-sm font-medium text-gray-900 truncate">{user?.email}</p>
             </div>
             <Button
               variant="outline"
               size="sm"
               onClick={logout}
-              className="w-full"
+              className="w-full border-gray-300 text-gray-700 hover:bg-gray-50"
             >
               <LogOut className="mr-2 h-4 w-4" />
               Logout

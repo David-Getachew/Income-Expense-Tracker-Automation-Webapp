@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import Layout from '@/components/Layout';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -9,14 +9,26 @@ import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@
 import { Badge } from '@/components/ui/badge';
 import { Calendar } from '@/components/ui/calendar';
 import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
-import { CalendarIcon, Plus } from 'lucide-react';
-import { format } from 'date-fns';
+import { CalendarIcon, Plus, RotateCcw } from 'lucide-react';
+import { format, isToday } from 'date-fns';
 import { cn } from '@/lib/utils';
 import { Transaction } from '@/types';
 import { showSuccess, showError } from '@/utils/toast';
 
 const DataEntry: React.FC = () => {
-  const [transactions, setTransactions] = useState<Transaction[]>([]);
+  const [transactions, setTransactions] = useState<Transaction[]>(() => {
+    // Load transactions from localStorage
+    const savedTransactions = localStorage.getItem('foodBizTransactions');
+    if (savedTransactions) {
+      const parsed = JSON.parse(savedTransactions);
+      // Check if transactions are from today
+      if (parsed.date && isToday(new Date(parsed.date))) {
+        return parsed.transactions;
+      }
+    }
+    return [];
+  });
+  
   const [formData, setFormData] = useState({
     item: '',
     quantity: '',
@@ -28,6 +40,14 @@ const DataEntry: React.FC = () => {
   });
 
   const categories = ['Food', 'Beverages', 'Labor', 'Supply', 'Other'];
+
+  // Save transactions to localStorage whenever they change
+  useEffect(() => {
+    localStorage.setItem('foodBizTransactions', JSON.stringify({
+      transactions,
+      date: new Date().toISOString()
+    }));
+  }, [transactions]);
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
@@ -73,6 +93,11 @@ const DataEntry: React.FC = () => {
       ...prev,
       [field]: value
     }));
+  };
+
+  const clearSessionTransactions = () => {
+    setTransactions([]);
+    showSuccess('Session transactions cleared');
   };
 
   return (
@@ -215,12 +240,22 @@ const DataEntry: React.FC = () => {
           </CardContent>
         </Card>
 
-        {/* Transactions Table */}
+        {/* Recent Entries */}
         {transactions.length > 0 && (
           <Card>
-            <CardHeader>
-              <CardTitle>Recent Entries</CardTitle>
-              <CardDescription>Transactions you've added in this session</CardDescription>
+            <CardHeader className="flex flex-row items-center justify-between">
+              <div>
+                <CardTitle>Recent Entries</CardTitle>
+                <CardDescription>Transactions you've added in this session</CardDescription>
+              </div>
+              <Button
+                variant="outline"
+                size="sm"
+                onClick={clearSessionTransactions}
+              >
+                <RotateCcw className="mr-2 h-4 w-4" />
+                Clear Session
+              </Button>
             </CardHeader>
             <CardContent>
               <Table>
@@ -245,7 +280,10 @@ const DataEntry: React.FC = () => {
                         {(transaction.quantity * transaction.pricePerUnit).toLocaleString()} ETB
                       </TableCell>
                       <TableCell>
-                        <Badge variant={transaction.entryType === 'Income' ? 'default' : 'destructive'}>
+                        <Badge 
+                          variant={transaction.entryType === 'Income' ? 'default' : 'destructive'}
+                          className={transaction.entryType === 'Income' ? 'bg-green-100 text-green-800' : 'bg-red-100 text-red-800'}
+                        >
                           {transaction.entryType}
                         </Badge>
                       </TableCell>

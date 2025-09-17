@@ -26,11 +26,17 @@ const Reports: React.FC = () => {
         {/* Reports Grid */}
         <div className="grid grid-cols-1 lg:grid-cols-2 xl:grid-cols-3 gap-6">
           {mockWeeklyReports.map((report, index) => (
-            <Card key={index} className="hover:shadow-lg transition-shadow">
+            <Card 
+              key={index} 
+              className="hover:shadow-lg transition-all duration-300 border border-gray-200"
+            >
               <CardHeader>
                 <div className="flex items-center justify-between">
                   <FileText className="h-8 w-8 text-blue-600" />
-                  <Badge variant={report.profit > 0 ? 'default' : 'destructive'}>
+                  <Badge 
+                    variant={report.profit > 0 ? 'default' : 'destructive'}
+                    className={report.profit > 0 ? 'bg-green-100 text-green-800' : 'bg-red-100 text-red-800'}
+                  >
                     {report.profit > 0 ? 'Profitable' : 'Loss'}
                   </Badge>
                 </div>
@@ -66,8 +72,7 @@ const Reports: React.FC = () => {
                 {/* Download Button */}
                 <Button 
                   onClick={() => handleDownload(report.reportUrl, report.week)}
-                  className="w-full"
-                  variant="outline"
+                  className="w-full bg-blue-600 hover:bg-blue-700"
                 >
                   <Download className="mr-2 h-4 w-4" />
                   Download PDF Report
@@ -85,21 +90,21 @@ const Reports: React.FC = () => {
           </CardHeader>
           <CardContent>
             <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-              <div className="text-center p-4 bg-blue-50 rounded-lg">
+              <div className="text-center p-4 bg-blue-50 rounded-lg border border-blue-100">
                 <div className="text-2xl font-bold text-blue-600">{mockWeeklyReports.length}</div>
                 <div className="text-sm text-blue-800">Total Reports</div>
               </div>
-              <div className="text-center p-4 bg-green-50 rounded-lg">
+              <div className="text-center p-4 bg-green-50 rounded-lg border border-green-100">
                 <div className="text-2xl font-bold text-green-600">
                   {mockWeeklyReports.filter(r => r.profit > 0).length}
                 </div>
                 <div className="text-sm text-green-800">Profitable Weeks</div>
               </div>
-              <div className="text-center p-4 bg-orange-50 rounded-lg">
-                <div className="text-2xl font-bold text-orange-600">
+              <div className="text-center p-4 bg-amber-50 rounded-lg border border-amber-100">
+                <div className="text-2xl font-bold text-amber-600">
                   {mockWeeklyReports.reduce((sum, r) => sum + r.profit, 0).toLocaleString()} ETB
                 </div>
-                <div className="text-sm text-orange-800">Total Profit</div>
+                <div className="text-sm text-amber-800">Total Profit</div>
               </div>
             </div>
           </CardContent>

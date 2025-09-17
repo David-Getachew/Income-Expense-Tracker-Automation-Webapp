@@ -35,7 +35,7 @@ import {
   mockTopItems, 
   mockCategoryBreakdown 
 } from '@/data/mockData';
-import { format, isWithinInterval, subDays } from 'date-fns';
+import { format, isWithinInterval } from 'date-fns';
 import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
 import { Calendar } from '@/components/ui/calendar';
 
@@ -113,7 +113,10 @@ const Dashboard: React.FC = () => {
 
   // Filter transaction history based on its own date filter
   const filterTransactionHistory = () => {
-    if (!transactionDateRange.from || !transactionDateRange.to) return mockTransactions;
+    // If no date range is selected, return all transactions
+    if (!transactionDateRange || !transactionDateRange.from || !transactionDateRange.to) {
+      return mockTransactions;
+    }
     
     return mockTransactions.filter(transaction => {
       const transactionDate = new Date(transaction.date);

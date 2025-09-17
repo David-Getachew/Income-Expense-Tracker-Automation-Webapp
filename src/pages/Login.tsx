@@ -40,7 +40,9 @@ const Login: React.FC = () => {
           <div className="mx-auto bg-blue-100 p-3 rounded-full w-16 h-16 flex items-center justify-center mb-4">
             <Mail className="h-8 w-8 text-blue-600" />
           </div>
-          <CardTitle className="text-2xl font-bold text-gray-900">Welcome to Sunset Sips n' Bites</CardTitle>
+          <CardTitle className="text-2xl font-bold bg-gradient-to-r from-orange-400 via-pink-500 to-purple-700 bg-clip-text text-transparent">
+            Welcome to Sunset Sips n' Bites
+          </CardTitle>
           <CardDescription className="text-gray-600">
             Sign in to your business account
           </CardDescription>

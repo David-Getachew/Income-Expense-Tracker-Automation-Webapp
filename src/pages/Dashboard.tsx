@@ -35,7 +35,7 @@ import {
   mockTopItems, 
   mockCategoryBreakdown 
 } from '@/data/mockData';
-import { format, isWithinInterval } from 'date-fns';
+import { format, isWithinInterval, subDays } from 'date-fns';
 import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
 import { Calendar } from '@/components/ui/calendar';
 
@@ -50,8 +50,24 @@ const mockTopSellingItems = [
 ];
 
 const Dashboard: React.FC = () => {
-  // Date filter state
+  // Global date filter state
   const [dateRange, setDateRange] = useState<{ 
+    from: Date | undefined; 
+    to: Date | undefined 
+  }>({ from: undefined, to: undefined });
+
+  // Section-specific date filter states
+  const [topItemsDateRange, setTopItemsDateRange] = useState<{ 
+    from: Date | undefined; 
+    to: Date | undefined 
+  }>({ from: undefined, to: undefined });
+
+  const [categoryDateRange, setCategoryDateRange] = useState<{ 
+    from: Date | undefined; 
+    to: Date | undefined 
+  }>({ from: undefined, to: undefined });
+
+  const [topSellingDateRange, setTopSellingDateRange] = useState<{ 
     from: Date | undefined; 
     to: Date | undefined 
   }>({ from: undefined, to: undefined });
@@ -165,7 +181,9 @@ const Dashboard: React.FC = () => {
         {/* Header */}
         <div className="flex flex-col md:flex-row md:items-center md:justify-between gap-4">
           <div>
-            <h1 className="text-3xl font-bold text-gray-900">Dashboard</h1>
+            <h1 className="text-3xl font-bold bg-gradient-to-r from-orange-400 via-pink-500 to-purple-700 bg-clip-text text-transparent">
+              Dashboard
+            </h1>
             <p className="text-gray-600">Overview of your food business performance</p>
           </div>
           <div className="flex items-center gap-2">
@@ -241,11 +259,34 @@ const Dashboard: React.FC = () => {
             </CardContent>
           </Card>
 
-          {/* Top Items */}
+          {/* Top Items by Revenue */}
           <Card>
-            <CardHeader>
-              <CardTitle>Top Items by Revenue</CardTitle>
-              <CardDescription>Best performing items</CardDescription>
+            <CardHeader className="flex flex-row items-center justify-between">
+              <div>
+                <CardTitle>Top Items by Revenue</CardTitle>
+                <CardDescription>Best performing items</CardDescription>
+              </div>
+              <Popover>
+                <PopoverTrigger asChild>
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    className="text-left font-normal"
+                  >
+                    <CalendarIcon className="mr-2 h-4 w-4" />
+                    <span>Filter</span>
+                  </Button>
+                </PopoverTrigger>
+                <PopoverContent className="w-auto p-0" align="end">
+                  <Calendar
+                    mode="range"
+                    selected={topItemsDateRange}
+                    onSelect={setTopItemsDateRange}
+                    numberOfMonths={2}
+                    initialFocus
+                  />
+                </PopoverContent>
+              </Popover>
             </CardHeader>
             <CardContent>
               <ResponsiveContainer width="100%" height={300}>
@@ -265,12 +306,35 @@ const Dashboard: React.FC = () => {
         </div>
 
         {/* Second Charts Row */}
-        <div className="grid grid-cols-1 gap-6">
-          {/* Category Breakdown */}
+        <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+          {/* Expenses by Category */}
           <Card>
-            <CardHeader>
-              <CardTitle>Expenses by Category</CardTitle>
-              <CardDescription>Distribution of expense categories</CardDescription>
+            <CardHeader className="flex flex-row items-center justify-between">
+              <div>
+                <CardTitle>Expenses by Category</CardTitle>
+                <CardDescription>Distribution of expense categories</CardDescription>
+              </div>
+              <Popover>
+                <PopoverTrigger asChild>
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    className="text-left font-normal"
+                  >
+                    <CalendarIcon className="mr-2 h-4 w-4" />
+                    <span>Filter</span>
+                  </Button>
+                </PopoverTrigger>
+                <PopoverContent className="w-auto p-0" align="end">
+                  <Calendar
+                    mode="range"
+                    selected={categoryDateRange}
+                    onSelect={setCategoryDateRange}
+                    numberOfMonths={2}
+                    initialFocus
+                  />
+                </PopoverContent>
+              </Popover>
             </CardHeader>
             <CardContent>
               <ResponsiveContainer width="100%" height={300}>
@@ -310,42 +374,66 @@ const Dashboard: React.FC = () => {
               </ResponsiveContainer>
             </CardContent>
           </Card>
-        </div>
 
-        {/* Top Selling Items */}
-        <Card>
-          <CardHeader>
-            <CardTitle>Top Selling Items</CardTitle>
-            <CardDescription>Best performing items by revenue and quantity</CardDescription>
-          </CardHeader>
-          <CardContent>
-            <ResponsiveContainer width="100%" height={300}>
-              <BarChart
-                data={mockTopSellingItems}
-                layout="vertical"
-                margin={{ top: 5, right: 30, left: 100, bottom: 5 }}
-              >
-                <CartesianGrid strokeDasharray="3 3" />
-                <XAxis type="number" />
-                <YAxis 
-                  dataKey="item" 
-                  type="category" 
-                  width={80}
-                  tick={{ fontSize: 12 }}
-                />
-                <Tooltip 
-                  formatter={(value, name) => [
-                    name === 'revenue' ? `${value} ETB` : `${value} units`,
-                    name === 'revenue' ? 'Revenue' : 'Quantity Sold'
-                  ]}
-                />
-                <Legend />
-                <Bar dataKey="revenue" name="Revenue (ETB)" fill="#1E3A8A" />
-                <Bar dataKey="quantity" name="Quantity Sold" fill="#10B981" />
-              </BarChart>
-            </ResponsiveContainer>
-          </CardContent>
-        </Card>
+          {/* Top Selling Items */}
+          <Card>
+            <CardHeader className="flex flex-row items-center justify-between">
+              <div>
+                <CardTitle>Top Selling Items</CardTitle>
+                <CardDescription>Best performing items by revenue and quantity</CardDescription>
+              </div>
+              <Popover>
+                <PopoverTrigger asChild>
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    className="text-left font-normal"
+                  >
+                    <CalendarIcon className="mr-2 h-4 w-4" />
+                    <span>Filter</span>
+                  </Button>
+                </PopoverTrigger>
+                <PopoverContent className="w-auto p-0" align="end">
+                  <Calendar
+                    mode="range"
+                    selected={topSellingDateRange}
+                    onSelect={setTopSellingDateRange}
+                    numberOfMonths={2}
+                    initialFocus
+                  />
+                </PopoverContent>
+              </Popover>
+            </CardHeader>
+            <CardContent>
+              <ResponsiveContainer width="100%" height={300}>
+                <BarChart
+                  data={mockTopSellingItems}
+                  layout="vertical"
+                  margin={{ top: 5, right: 30, left: 100, bottom: 5 }}
+                >
+                  <CartesianGrid strokeDasharray="3 3" />
+                  <XAxis type="number" />
+                  <YAxis 
+                    dataKey="item" 
+                    type="category" 
+                    width={80}
+                    tick={{ fontSize: 12 }}
+                  />
+                  <Tooltip 
+                    formatter={(value, name) => [
+                      name === 'revenue' ? `${value} ETB` : `${value} units`,
+                      name === 'revenue' ? 'Revenue' : 'Quantity Sold'
+                    ]}
+                    labelStyle={{ color: name === 'revenue' ? '#10B981' : '#1E3A8A' }}
+                  />
+                  <Legend />
+                  <Bar dataKey="revenue" name="Revenue" fill="#10B981" />
+                  <Bar dataKey="quantity" name="Quantity Sold" fill="#1E3A8A" />
+                </BarChart>
+              </ResponsiveContainer>
+            </CardContent>
+          </Card>
+        </div>
 
         {/* Transaction History Table */}
         <Card>

@@ -32,6 +32,7 @@ import {
 import { 
   mockTransactions, 
   mockDailyStats, 
+  mockTopItems, 
   mockCategoryBreakdown 
 } from '@/data/mockData';
 import { format, isWithinInterval } from 'date-fns';
@@ -46,12 +47,6 @@ const mockTopSellingItems = [
   { "item": "Shiro Injera Plate", "revenue": 670, "quantity": 25 },
   { "item": "Green Tea", "revenue": 540, "quantity": 40 },
   { "item": "Samosa", "revenue": 430, "quantity": 35 }
-];
-
-// Mock data for category breakdown
-const mockCategoryRevenue = [
-  { "category": "Food", "revenue": 2250 },
-  { "category": "Beverages", "revenue": 1740 }
 ];
 
 const Dashboard: React.FC = () => {
@@ -146,7 +141,6 @@ const Dashboard: React.FC = () => {
 
   // Colors for charts
   const COLORS = ['#1E3A8A', '#10B981', '#F59E0B', '#EF4444', '#8B5CF6'];
-  const CATEGORY_COLORS = ['#1E3A8A', '#10B981'];
 
   // Format date range for display
   const formatDateRange = () => {
@@ -247,36 +241,23 @@ const Dashboard: React.FC = () => {
             </CardContent>
           </Card>
 
-          {/* Top Selling Items */}
+          {/* Top Items */}
           <Card>
             <CardHeader>
-              <CardTitle>Top Selling Items</CardTitle>
-              <CardDescription>Best performing items by revenue</CardDescription>
+              <CardTitle>Top Items by Revenue</CardTitle>
+              <CardDescription>Best performing items</CardDescription>
             </CardHeader>
             <CardContent>
               <ResponsiveContainer width="100%" height={300}>
-                <BarChart
-                  data={mockTopSellingItems}
-                  layout="vertical"
-                  margin={{ top: 5, right: 30, left: 100, bottom: 5 }}
-                >
+                <BarChart data={mockTopItems}>
                   <CartesianGrid strokeDasharray="3 3" />
-                  <XAxis type="number" />
-                  <YAxis 
-                    dataKey="item" 
-                    type="category" 
-                    width={80}
-                    tick={{ fontSize: 12 }}
-                  />
+                  <XAxis dataKey="item" />
+                  <YAxis />
                   <Tooltip 
-                    formatter={(value, name) => [
-                      name === 'revenue' ? `${value} ETB` : `${value} units`,
-                      name === 'revenue' ? 'Revenue' : 'Quantity'
-                    ]}
+                    formatter={(value) => [`${value} ETB`, '']}
+                    labelFormatter={(label) => `Item: ${label}`}
                   />
-                  <Legend />
-                  <Bar dataKey="revenue" name="Revenue (ETB)" fill="#1E3A8A" />
-                  <Bar dataKey="quantity" name="Quantity Sold" fill="#10B981" />
+                  <Bar dataKey="total" fill="#1E3A8A" name="Revenue (ETB)" />
                 </BarChart>
               </ResponsiveContainer>
             </CardContent>
@@ -284,7 +265,7 @@ const Dashboard: React.FC = () => {
         </div>
 
         {/* Second Charts Row */}
-        <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+        <div className="grid grid-cols-1 gap-6">
           {/* Category Breakdown */}
           <Card>
             <CardHeader>
@@ -329,51 +310,42 @@ const Dashboard: React.FC = () => {
               </ResponsiveContainer>
             </CardContent>
           </Card>
-
-          {/* Category Revenue Breakdown */}
-          <Card>
-            <CardHeader>
-              <CardTitle>Revenue by Category</CardTitle>
-              <CardDescription>Food vs Beverages revenue distribution</CardDescription>
-            </CardHeader>
-            <CardContent>
-              <ResponsiveContainer width="100%" height={300}>
-                <PieChart>
-                  <Pie
-                    data={mockCategoryRevenue}
-                    cx="50%"
-                    cy="50%"
-                    innerRadius={60}
-                    outerRadius={80}
-                    fill="#8884d8"
-                    paddingAngle={2}
-                    dataKey="revenue"
-                    nameKey="category"
-                    label={({ category, percent }) => `${category} ${(percent * 100).toFixed(0)}%`}
-                  >
-                    {mockCategoryRevenue.map((entry, index) => (
-                      <Cell key={`cell-${index}`} fill={CATEGORY_COLORS[index % CATEGORY_COLORS.length]} />
-                    ))}
-                  </Pie>
-                  <Tooltip 
-                    formatter={(value) => [`${value} ETB`, 'Revenue']}
-                  />
-                  <text
-                    x="50%"
-                    y="50%"
-                    textAnchor="middle"
-                    dominantBaseline="middle"
-                    className="text-sm font-bold"
-                  >
-                    {mockCategoryRevenue
-                      .reduce((sum, item) => sum + item.revenue, 0)
-                      .toLocaleString()} ETB
-                  </text>
-                </PieChart>
-              </ResponsiveContainer>
-            </CardContent>
-          </Card>
         </div>
+
+        {/* Top Selling Items */}
+        <Card>
+          <CardHeader>
+            <CardTitle>Top Selling Items</CardTitle>
+            <CardDescription>Best performing items by revenue and quantity</CardDescription>
+          </CardHeader>
+          <CardContent>
+            <ResponsiveContainer width="100%" height={300}>
+              <BarChart
+                data={mockTopSellingItems}
+                layout="vertical"
+                margin={{ top: 5, right: 30, left: 100, bottom: 5 }}
+              >
+                <CartesianGrid strokeDasharray="3 3" />
+                <XAxis type="number" />
+                <YAxis 
+                  dataKey="item" 
+                  type="category" 
+                  width={80}
+                  tick={{ fontSize: 12 }}
+                />
+                <Tooltip 
+                  formatter={(value, name) => [
+                    name === 'revenue' ? `${value} ETB` : `${value} units`,
+                    name === 'revenue' ? 'Revenue' : 'Quantity Sold'
+                  ]}
+                />
+                <Legend />
+                <Bar dataKey="revenue" name="Revenue (ETB)" fill="#1E3A8A" />
+                <Bar dataKey="quantity" name="Quantity Sold" fill="#10B981" />
+              </BarChart>
+            </ResponsiveContainer>
+          </CardContent>
+        </Card>
 
         {/* Transaction History Table */}
         <Card>

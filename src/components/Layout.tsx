@@ -35,7 +35,7 @@ const Layout: React.FC<LayoutProps> = ({ children }) => {
       {/* Mobile header with menu button */}
       <div className="lg:hidden fixed top-0 left-0 right-0 z-50 bg-white border-b border-gray-200">
         <div className="flex items-center justify-between h-16 px-4">
-          <h1 className="text-xl font-bold text-blue-900">Food Business</h1>
+          <h1 className="text-xl font-bold text-blue-900">Sunset Sips n' Bites</h1>
           <Button
             variant="outline"
             size="sm"
@@ -54,7 +54,7 @@ const Layout: React.FC<LayoutProps> = ({ children }) => {
         <div className="flex flex-col h-full">
           {/* Logo for desktop */}
           <div className="hidden lg:flex items-center justify-center h-16 px-4 border-b">
-            <h1 className="text-xl font-bold text-blue-900">Food Business</h1>
+            <h1 className="text-xl font-bold text-blue-900">Sunset Sips n' Bites</h1>
           </div>
 
           {/* Navigation */}

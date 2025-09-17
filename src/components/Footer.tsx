@@ -6,7 +6,7 @@ const Footer: React.FC = () => {
       <div className="container mx-auto px-4">
         <div className="text-center text-sm text-gray-600">
           <p>
-            Built by Dawit Getachew — © 2025 Automation & Health Apps ·{' '}
+            Built by Dawit Getachew — © 2025 Automation & Business Apps ·{' '}
             <a 
               href="https://github.com/David-Getachew/" 
               target="_blank" 

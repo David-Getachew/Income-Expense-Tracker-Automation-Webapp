@@ -26,20 +26,33 @@ import {
   TrendingUp, 
   TrendingDown, 
   Percent,
-  ChevronUp,
-  ChevronDown,
   ChevronsUpDown,
   CalendarIcon
 } from 'lucide-react';
 import { 
   mockTransactions, 
   mockDailyStats, 
-  mockTopItems, 
   mockCategoryBreakdown 
 } from '@/data/mockData';
 import { format, isWithinInterval } from 'date-fns';
 import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
 import { Calendar } from '@/components/ui/calendar';
+
+// Mock data for top selling items
+const mockTopSellingItems = [
+  { "item": "Cappuccino", "revenue": 1200, "quantity": 45 },
+  { "item": "Falafel Sandwich", "revenue": 950, "quantity": 30 },
+  { "item": "Potato Chips", "revenue": 780, "quantity": 50 },
+  { "item": "Shiro Injera Plate", "revenue": 670, "quantity": 25 },
+  { "item": "Green Tea", "revenue": 540, "quantity": 40 },
+  { "item": "Samosa", "revenue": 430, "quantity": 35 }
+];
+
+// Mock data for category breakdown
+const mockCategoryRevenue = [
+  { "category": "Food", "revenue": 2250 },
+  { "category": "Beverages", "revenue": 1740 }
+];
 
 const Dashboard: React.FC = () => {
   // Date filter state
@@ -131,8 +144,9 @@ const Dashboard: React.FC = () => {
   const profit = totalIncome - totalExpenses;
   const profitMargin = totalIncome > 0 ? ((profit / totalIncome) * 100) : 0;
 
-  // Colors for pie chart
+  // Colors for charts
   const COLORS = ['#1E3A8A', '#10B981', '#F59E0B', '#EF4444', '#8B5CF6'];
+  const CATEGORY_COLORS = ['#1E3A8A', '#10B981'];
 
   // Format date range for display
   const formatDateRange = () => {
@@ -140,18 +154,15 @@ const Dashboard: React.FC = () => {
     return `${format(dateRange.from, "MMM dd")} - ${format(dateRange.to, "MMM dd, yyyy")}`;
   };
 
+  // Format daily stats description
+  const formatDailyStatsDescription = () => {
+    if (!dateRange.from || !dateRange.to) return "All time performance";
+    return `${format(dateRange.from, "MMM dd")} - ${format(dateRange.to, "MMM dd, yyyy")} performance`;
+  };
+
   // Handle sort direction toggle
   const toggleSortDirection = () => {
     setSortDirection(sortDirection === 'asc' ? 'desc' : 'asc');
-  };
-
-  // Get sort icon
-  const getSortIcon = () => {
-    return sortDirection === 'asc' ? (
-      <ChevronUp className="h-4 w-4" />
-    ) : (
-      <ChevronDown className="h-4 w-4" />
-    );
   };
 
   return (
@@ -164,7 +175,6 @@ const Dashboard: React.FC = () => {
             <p className="text-gray-600">Overview of your food business performance</p>
           </div>
           <div className="flex items-center gap-2">
-            <span className="text-sm text-gray-500">{formatDateRange()}</span>
             <DateFilter dateRange={dateRange} setDateRange={setDateRange} />
           </div>
         </div>
@@ -203,7 +213,7 @@ const Dashboard: React.FC = () => {
           <Card>
             <CardHeader>
               <CardTitle>Daily Income vs Expenses</CardTitle>
-              <CardDescription>Last 7 days performance</CardDescription>
+              <CardDescription>{formatDailyStatsDescription()}</CardDescription>
             </CardHeader>
             <CardContent>
               <ResponsiveContainer width="100%" height={300}>
@@ -237,23 +247,36 @@ const Dashboard: React.FC = () => {
             </CardContent>
           </Card>
 
-          {/* Top Items */}
+          {/* Top Selling Items */}
           <Card>
             <CardHeader>
-              <CardTitle>Top Items by Revenue</CardTitle>
-              <CardDescription>Best performing items</CardDescription>
+              <CardTitle>Top Selling Items</CardTitle>
+              <CardDescription>Best performing items by revenue</CardDescription>
             </CardHeader>
             <CardContent>
               <ResponsiveContainer width="100%" height={300}>
-                <BarChart data={mockTopItems}>
+                <BarChart
+                  data={mockTopSellingItems}
+                  layout="vertical"
+                  margin={{ top: 5, right: 30, left: 100, bottom: 5 }}
+                >
                   <CartesianGrid strokeDasharray="3 3" />
-                  <XAxis dataKey="item" />
-                  <YAxis />
-                  <Tooltip 
-                    formatter={(value) => [`${value} ETB`, '']}
-                    labelFormatter={(label) => `Item: ${label}`}
+                  <XAxis type="number" />
+                  <YAxis 
+                    dataKey="item" 
+                    type="category" 
+                    width={80}
+                    tick={{ fontSize: 12 }}
                   />
-                  <Bar dataKey="total" fill="#1E3A8A" name="Revenue (ETB)" />
+                  <Tooltip 
+                    formatter={(value, name) => [
+                      name === 'revenue' ? `${value} ETB` : `${value} units`,
+                      name === 'revenue' ? 'Revenue' : 'Quantity'
+                    ]}
+                  />
+                  <Legend />
+                  <Bar dataKey="revenue" name="Revenue (ETB)" fill="#1E3A8A" />
+                  <Bar dataKey="quantity" name="Quantity Sold" fill="#10B981" />
                 </BarChart>
               </ResponsiveContainer>
             </CardContent>
@@ -261,7 +284,7 @@ const Dashboard: React.FC = () => {
         </div>
 
         {/* Second Charts Row */}
-        <div className="grid grid-cols-1 gap-6">
+        <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
           {/* Category Breakdown */}
           <Card>
             <CardHeader>
@@ -288,10 +311,7 @@ const Dashboard: React.FC = () => {
                     ))}
                   </Pie>
                   <Tooltip 
-                    formatter={(value, name, props) => [
-                      `${value} ETB (${(props.payload.percent * 100).toFixed(1)}%)`,
-                      'Amount'
-                    ]}
+                    formatter={(value) => [`${value} ETB`, 'Amount']}
                   />
                   <text
                     x="50%"
@@ -303,6 +323,50 @@ const Dashboard: React.FC = () => {
                     {mockCategoryBreakdown
                       .filter(item => item.value > 0)
                       .reduce((sum, item) => sum + item.value, 0)
+                      .toLocaleString()} ETB
+                  </text>
+                </PieChart>
+              </ResponsiveContainer>
+            </CardContent>
+          </Card>
+
+          {/* Category Revenue Breakdown */}
+          <Card>
+            <CardHeader>
+              <CardTitle>Revenue by Category</CardTitle>
+              <CardDescription>Food vs Beverages revenue distribution</CardDescription>
+            </CardHeader>
+            <CardContent>
+              <ResponsiveContainer width="100%" height={300}>
+                <PieChart>
+                  <Pie
+                    data={mockCategoryRevenue}
+                    cx="50%"
+                    cy="50%"
+                    innerRadius={60}
+                    outerRadius={80}
+                    fill="#8884d8"
+                    paddingAngle={2}
+                    dataKey="revenue"
+                    nameKey="category"
+                    label={({ category, percent }) => `${category} ${(percent * 100).toFixed(0)}%`}
+                  >
+                    {mockCategoryRevenue.map((entry, index) => (
+                      <Cell key={`cell-${index}`} fill={CATEGORY_COLORS[index % CATEGORY_COLORS.length]} />
+                    ))}
+                  </Pie>
+                  <Tooltip 
+                    formatter={(value) => [`${value} ETB`, 'Revenue']}
+                  />
+                  <text
+                    x="50%"
+                    y="50%"
+                    textAnchor="middle"
+                    dominantBaseline="middle"
+                    className="text-sm font-bold"
+                  >
+                    {mockCategoryRevenue
+                      .reduce((sum, item) => sum + item.revenue, 0)
                       .toLocaleString()} ETB
                   </text>
                 </PieChart>
@@ -346,7 +410,7 @@ const Dashboard: React.FC = () => {
                 onClick={toggleSortDirection}
                 className="flex items-center gap-2"
               >
-                Sort by Date {getSortIcon()}
+                <ChevronsUpDown className="h-4 w-4" />
               </Button>
             </div>
           </CardHeader>

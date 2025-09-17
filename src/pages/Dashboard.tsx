@@ -111,6 +111,27 @@ const Dashboard: React.FC = () => {
     });
   };
 
+  // Filter top items based on date range
+  const filterTopItemsByDate = () => {
+    // For now, we're using mock data, so we'll return all data
+    // In a real app, this would filter based on the date range
+    return mockTopItems;
+  };
+
+  // Filter category breakdown based on date range
+  const filterCategoryBreakdownByDate = () => {
+    // For now, we're using mock data, so we'll return all data
+    // In a real app, this would filter based on the date range
+    return mockCategoryBreakdown.filter(item => item.value > 0);
+  };
+
+  // Filter top selling items based on date range
+  const filterTopSellingItemsByDate = () => {
+    // For now, we're using mock data, so we'll return all data
+    // In a real app, this would filter based on the date range
+    return mockTopSellingItems;
+  };
+
   // Filter transaction history based on its own date filter
   const filterTransactionHistory = () => {
     // If no date range is selected, return all transactions
@@ -162,9 +183,9 @@ const Dashboard: React.FC = () => {
   const COLORS = ['#1E3A8A', '#10B981', '#F59E0B', '#EF4444', '#8B5CF6'];
 
   // Format date range for display
-  const formatDateRange = () => {
-    if (!dateRange.from || !dateRange.to) return "All Time";
-    return `${format(dateRange.from, "MMM dd")} - ${format(dateRange.to, "MMM dd, yyyy")}`;
+  const formatDateRange = (range: { from: Date | undefined; to: Date | undefined } | undefined) => {
+    if (!range || !range.from || !range.to) return "Filter";
+    return `${format(range.from, "MMM dd")} - ${format(range.to, "MMM dd")}`;
   };
 
   // Format daily stats description
@@ -184,9 +205,7 @@ const Dashboard: React.FC = () => {
         {/* Header */}
         <div className="flex flex-col md:flex-row md:items-center md:justify-between gap-4">
           <div>
-            <h1 className="text-3xl font-bold bg-gradient-to-r from-orange-400 via-pink-500 to-purple-700 bg-clip-text text-transparent">
-              Dashboard
-            </h1>
+            <h1 className="text-3xl font-bold text-gray-900">Dashboard</h1>
             <p className="text-gray-600">Overview of your food business performance</p>
           </div>
           <div className="flex items-center gap-2">
@@ -277,7 +296,7 @@ const Dashboard: React.FC = () => {
                     className="text-left font-normal"
                   >
                     <CalendarIcon className="mr-2 h-4 w-4" />
-                    <span>Filter</span>
+                    <span>{formatDateRange(topItemsDateRange)}</span>
                   </Button>
                 </PopoverTrigger>
                 <PopoverContent className="w-auto p-0" align="end">
@@ -293,12 +312,12 @@ const Dashboard: React.FC = () => {
             </CardHeader>
             <CardContent>
               <ResponsiveContainer width="100%" height={300}>
-                <BarChart data={mockTopItems}>
+                <BarChart data={filterTopItemsByDate()}>
                   <CartesianGrid strokeDasharray="3 3" />
                   <XAxis dataKey="item" />
                   <YAxis />
                   <Tooltip 
-                    formatter={(value) => [`${value} ETB`, '']}
+                    formatter={(value) => [`${value} ETB`, 'Revenue']}
                     labelFormatter={(label) => `Item: ${label}`}
                   />
                   <Bar dataKey="total" fill="#1E3A8A" name="Revenue (ETB)" />
@@ -325,7 +344,7 @@ const Dashboard: React.FC = () => {
                     className="text-left font-normal"
                   >
                     <CalendarIcon className="mr-2 h-4 w-4" />
-                    <span>Filter</span>
+                    <span>{formatDateRange(categoryDateRange)}</span>
                   </Button>
                 </PopoverTrigger>
                 <PopoverContent className="w-auto p-0" align="end">
@@ -343,7 +362,7 @@ const Dashboard: React.FC = () => {
               <ResponsiveContainer width="100%" height={300}>
                 <PieChart>
                   <Pie
-                    data={mockCategoryBreakdown.filter(item => item.value > 0)}
+                    data={filterCategoryBreakdownByDate()}
                     cx="50%"
                     cy="50%"
                     innerRadius={60}
@@ -354,7 +373,7 @@ const Dashboard: React.FC = () => {
                     nameKey="category"
                     label={({ category, percent }) => `${category} ${(percent * 100).toFixed(0)}%`}
                   >
-                    {mockCategoryBreakdown.map((entry, index) => (
+                    {filterCategoryBreakdownByDate().map((entry, index) => (
                       <Cell key={`cell-${index}`} fill={COLORS[index % COLORS.length]} />
                     ))}
                   </Pie>
@@ -368,8 +387,7 @@ const Dashboard: React.FC = () => {
                     dominantBaseline="middle"
                     className="text-sm font-bold"
                   >
-                    {mockCategoryBreakdown
-                      .filter(item => item.value > 0)
+                    {filterCategoryBreakdownByDate()
                       .reduce((sum, item) => sum + item.value, 0)
                       .toLocaleString()} ETB
                   </text>
@@ -393,7 +411,7 @@ const Dashboard: React.FC = () => {
                     className="text-left font-normal"
                   >
                     <CalendarIcon className="mr-2 h-4 w-4" />
-                    <span>Filter</span>
+                    <span>{formatDateRange(topSellingDateRange)}</span>
                   </Button>
                 </PopoverTrigger>
                 <PopoverContent className="w-auto p-0" align="end">
@@ -410,7 +428,7 @@ const Dashboard: React.FC = () => {
             <CardContent>
               <ResponsiveContainer width="100%" height={300}>
                 <BarChart
-                  data={mockTopSellingItems}
+                  data={filterTopSellingItemsByDate()}
                   layout="vertical"
                   margin={{ top: 5, right: 30, left: 100, bottom: 5 }}
                 >
@@ -424,10 +442,10 @@ const Dashboard: React.FC = () => {
                   />
                   <Tooltip 
                     formatter={(value, name) => [
-                      name === 'revenue' ? `${value} ETB` : `${value} units`,
+                      name === 'revenue' ? `${value} ETB` : `${value} Units`,
                       name === 'revenue' ? 'Revenue' : 'Quantity Sold'
                     ]}
-                    labelStyle={{ color: name === 'revenue' ? '#10B981' : '#1E3A8A' }}
+                    labelFormatter={(label) => `${label}`}
                   />
                   <Legend />
                   <Bar dataKey="revenue" name="Revenue" fill="#10B981" />
@@ -454,7 +472,7 @@ const Dashboard: React.FC = () => {
                     className="text-left font-normal"
                   >
                     <CalendarIcon className="mr-2 h-4 w-4" />
-                    <span>Filter Dates</span>
+                    <span>{formatDateRange(transactionDateRange)}</span>
                   </Button>
                 </PopoverTrigger>
                 <PopoverContent className="w-auto p-0" align="end">

@@ -28,7 +28,8 @@ import {
   Percent,
   ChevronUp,
   ChevronDown,
-  ChevronsUpDown
+  ChevronsUpDown,
+  CalendarIcon
 } from 'lucide-react';
 import { 
   mockTransactions, 
@@ -37,6 +38,8 @@ import {
   mockCategoryBreakdown 
 } from '@/data/mockData';
 import { format, isWithinInterval } from 'date-fns';
+import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
+import { Calendar } from '@/components/ui/calendar';
 
 const Dashboard: React.FC = () => {
   // Date filter state
@@ -45,8 +48,14 @@ const Dashboard: React.FC = () => {
     to: Date | undefined 
   }>({ from: undefined, to: undefined });
 
-  // Table sorting state
-  const [sortConfig, setSortConfig] = useState<{ key: string; direction: 'asc' | 'desc' } | null>(null);
+  // Transaction history filter state
+  const [transactionDateRange, setTransactionDateRange] = useState<{ 
+    from: Date | undefined; 
+    to: Date | undefined 
+  }>({ from: undefined, to: undefined });
+
+  // Transaction sorting state
+  const [sortDirection, setSortDirection] = useState<'asc' | 'desc'>('desc');
   
   // Pagination state
   const [currentPage, setCurrentPage] = useState(1);
@@ -78,6 +87,37 @@ const Dashboard: React.FC = () => {
     });
   };
 
+  // Filter transaction history based on its own date filter
+  const filterTransactionHistory = () => {
+    if (!transactionDateRange.from || !transactionDateRange.to) return mockTransactions;
+    
+    return mockTransactions.filter(transaction => {
+      const transactionDate = new Date(transaction.date);
+      return isWithinInterval(transactionDate, {
+        start: transactionDateRange.from!,
+        end: transactionDateRange.to!
+      });
+    });
+  };
+
+  // Sort transaction history
+  const sortedTransactions = React.useMemo(() => {
+    const filtered = filterTransactionHistory();
+    return [...filtered].sort((a, b) => {
+      const dateA = new Date(a.date);
+      const dateB = new Date(b.date);
+      return sortDirection === 'asc' ? 
+        dateA.getTime() - dateB.getTime() : 
+        dateB.getTime() - dateA.getTime();
+    });
+  }, [transactionDateRange, sortDirection]);
+
+  // Paginate transactions
+  const paginatedTransactions = React.useMemo(() => {
+    const startIndex = (currentPage - 1) * itemsPerPage;
+    return sortedTransactions.slice(startIndex, startIndex + itemsPerPage);
+  }, [sortedTransactions, currentPage]);
+
   // Calculate KPIs based on filtered data
   const filteredTransactions = filterTransactionsByDate();
   const totalIncome = filteredTransactions
@@ -94,52 +134,24 @@ const Dashboard: React.FC = () => {
   // Colors for pie chart
   const COLORS = ['#1E3A8A', '#10B981', '#F59E0B', '#EF4444', '#8B5CF6'];
 
-  // Sort transactions for the table
-  const sortedTransactions = React.useMemo(() => {
-    if (!sortConfig) return filteredTransactions;
-    
-    return [...filteredTransactions].sort((a, b) => {
-      if (a[sortConfig.key as keyof typeof a] < b[sortConfig.key as keyof typeof b]) {
-        return sortConfig.direction === 'asc' ? -1 : 1;
-      }
-      if (a[sortConfig.key as keyof typeof a] > b[sortConfig.key as keyof typeof b]) {
-        return sortConfig.direction === 'asc' ? 1 : -1;
-      }
-      return 0;
-    });
-  }, [filteredTransactions, sortConfig]);
-
-  // Paginate transactions
-  const paginatedTransactions = React.useMemo(() => {
-    const startIndex = (currentPage - 1) * itemsPerPage;
-    return sortedTransactions.slice(startIndex, startIndex + itemsPerPage);
-  }, [sortedTransactions, currentPage]);
-
-  // Handle sorting
-  const requestSort = (key: string) => {
-    let direction: 'asc' | 'desc' = 'asc';
-    if (sortConfig && sortConfig.key === key && sortConfig.direction === 'asc') {
-      direction = 'desc';
-    }
-    setSortConfig({ key, direction });
-  };
-
-  // Get sort icon for table headers
-  const getSortIcon = (columnName: string) => {
-    if (!sortConfig || sortConfig.key !== columnName) {
-      return <ChevronsUpDown className="ml-2 h-4 w-4" />;
-    }
-    return sortConfig.direction === 'asc' ? (
-      <ChevronUp className="ml-2 h-4 w-4" />
-    ) : (
-      <ChevronDown className="ml-2 h-4 w-4" />
-    );
-  };
-
   // Format date range for display
   const formatDateRange = () => {
     if (!dateRange.from || !dateRange.to) return "All Time";
     return `${format(dateRange.from, "MMM dd")} - ${format(dateRange.to, "MMM dd, yyyy")}`;
+  };
+
+  // Handle sort direction toggle
+  const toggleSortDirection = () => {
+    setSortDirection(sortDirection === 'asc' ? 'desc' : 'asc');
+  };
+
+  // Get sort icon
+  const getSortIcon = () => {
+    return sortDirection === 'asc' ? (
+      <ChevronUp className="h-4 w-4" />
+    ) : (
+      <ChevronDown className="h-4 w-4" />
+    );
   };
 
   return (
@@ -299,26 +311,53 @@ const Dashboard: React.FC = () => {
           </Card>
         </div>
 
-        {/* Recent Transactions Table */}
+        {/* Transaction History Table */}
         <Card>
-          <CardHeader>
-            <CardTitle>Recent Transactions</CardTitle>
-            <CardDescription>Latest business activities</CardDescription>
+          <CardHeader className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
+            <div>
+              <CardTitle>Transaction History</CardTitle>
+              <CardDescription>All business transactions</CardDescription>
+            </div>
+            <div className="flex items-center gap-2">
+              <Popover>
+                <PopoverTrigger asChild>
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    className="text-left font-normal"
+                  >
+                    <CalendarIcon className="mr-2 h-4 w-4" />
+                    <span>Filter Dates</span>
+                  </Button>
+                </PopoverTrigger>
+                <PopoverContent className="w-auto p-0" align="end">
+                  <Calendar
+                    mode="range"
+                    selected={transactionDateRange}
+                    onSelect={setTransactionDateRange}
+                    numberOfMonths={2}
+                    initialFocus
+                  />
+                </PopoverContent>
+              </Popover>
+              <Button
+                variant="outline"
+                size="sm"
+                onClick={toggleSortDirection}
+                className="flex items-center gap-2"
+              >
+                Sort by Date {getSortIcon()}
+              </Button>
+            </div>
           </CardHeader>
           <CardContent>
             <Table>
               <TableHeader>
                 <TableRow>
-                  <TableHead className="cursor-pointer" onClick={() => requestSort('date')}>
-                    Date {getSortIcon('date')}
-                  </TableHead>
-                  <TableHead className="cursor-pointer" onClick={() => requestSort('item')}>
-                    Item {getSortIcon('item')}
-                  </TableHead>
+                  <TableHead>Date</TableHead>
+                  <TableHead>Item</TableHead>
                   <TableHead>Type</TableHead>
-                  <TableHead className="cursor-pointer text-right" onClick={() => requestSort('pricePerUnit')}>
-                    Amount (ETB) {getSortIcon('pricePerUnit')}
-                  </TableHead>
+                  <TableHead className="text-right">Amount (ETB)</TableHead>
                 </TableRow>
               </TableHeader>
               <TableBody>

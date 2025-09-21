@@ -1,18 +1,83 @@
-import React from 'react';
+import React, { useState, useEffect } from 'react';
 import Layout from '@/components/Layout';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { Download, TrendingUp, TrendingDown, FileText } from 'lucide-react';
-import { mockWeeklyReports } from '@/data/mockData';
-import { showSuccess } from '@/utils/toast';
+import { showSuccess, showError } from '@/utils/toast';
+import { getWeeklySummaries } from '@/lib/api';
 
 const Reports: React.FC = () => {
-  const handleDownload = (reportUrl: string, week: string) => {
-    // Mock download functionality
-    showSuccess(`Downloading report for ${week}`);
-    console.log(`Would download: ${reportUrl}`);
+  const [weeklyReports, setWeeklyReports] = useState<any[]>([]);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
+
+  // Fetch weekly reports on component mount
+  useEffect(() => {
+    fetchWeeklyReports();
+  }, []);
+
+  const fetchWeeklyReports = async () => {
+    setLoading(true);
+    setError(null);
+    try {
+      const reports = await getWeeklySummaries();
+      // Map the reports to the correct format
+      const mappedReports = reports.map((report: any) => ({
+        ...report,
+        weekStart: report.week_start,
+        weekEnd: report.week_end,
+        netProfit: report.net_profit,
+        pdfUrl: report.pdf_url,
+        signedPdfUrl: report.signed_pdf_url || report.pdf_url
+      }));
+      setWeeklyReports(mappedReports);
+    } catch (err: any) {
+      console.error('Error fetching weekly reports:', err);
+      setError(err.message || 'Failed to load reports. Please try again.');
+      showError('Failed to load reports');
+    } finally {
+      setLoading(false);
+    }
   };
+
+  const handleDownload = async (report: any) => {
+    try {
+      // Use the signed PDF URL if available, otherwise use the regular PDF URL
+      const pdfUrl = report.signedPdfUrl || report.pdfUrl;
+      
+      if (pdfUrl) {
+        // Open the PDF in a new tab
+        window.open(pdfUrl, '_blank');
+        showSuccess(`Opening report for ${report.weekStart} to ${report.weekEnd}`);
+      } else {
+        showError('No PDF available for this report');
+      }
+    } catch (err) {
+      console.error('Error downloading report:', err);
+      showError('Failed to open report');
+    }
+  };
+
+  if (loading) {
+    return (
+      <Layout>
+        <div className="flex justify-center items-center h-64">
+          <div className="text-lg">Loading reports...</div>
+        </div>
+      </Layout>
+    );
+  }
+
+  if (error) {
+    return (
+      <Layout>
+        <div className="flex justify-center items-center h-64">
+          <div className="text-lg text-red-500">{error}</div>
+        </div>
+      </Layout>
+    );
+  }
 
   return (
     <Layout>
@@ -25,7 +90,7 @@ const Reports: React.FC = () => {
 
         {/* Reports Grid */}
         <div className="grid grid-cols-1 lg:grid-cols-2 xl:grid-cols-3 gap-6">
-          {mockWeeklyReports.map((report, index) => (
+          {weeklyReports.map((report, index) => (
             <Card 
               key={index} 
               className="hover:shadow-lg transition-all duration-300 border border-gray-200"
@@ -34,20 +99,20 @@ const Reports: React.FC = () => {
                 <div className="flex items-center justify-between">
                   <FileText className="h-8 w-8 text-blue-600" />
                   <Badge 
-                    variant={report.profit > 0 ? 'default' : 'destructive'}
-                    className={report.profit > 0 ? 'bg-green-100 text-green-800' : 'bg-red-100 text-red-800'}
+                    variant={report.netProfit > 0 ? 'default' : 'destructive'}
+                    className={report.netProfit > 0 ? 'bg-green-100 text-green-800' : 'bg-red-100 text-red-800'}
                   >
-                    {report.profit > 0 ? 'Profitable' : 'Loss'}
+                    {report.netProfit > 0 ? 'Profitable' : 'Loss'}
                   </Badge>
                 </div>
                 <CardTitle className="text-lg">Week Report</CardTitle>
-                <CardDescription>{report.week}</CardDescription>
+                <CardDescription>{`${report.weekStart} to ${report.weekEnd}`}</CardDescription>
               </CardHeader>
               <CardContent className="space-y-4">
                 {/* Profit Summary */}
                 <div className="flex items-center justify-between p-3 bg-gray-50 rounded-lg">
                   <div className="flex items-center space-x-2">
-                    {report.profit > 0 ? (
+                    {report.netProfit > 0 ? (
                       <TrendingUp className="h-5 w-5 text-green-600" />
                     ) : (
                       <TrendingDown className="h-5 w-5 text-red-600" />
@@ -55,9 +120,9 @@ const Reports: React.FC = () => {
                     <span className="font-medium">Net Profit</span>
                   </div>
                   <span className={`font-bold text-lg ${
-                    report.profit > 0 ? 'text-green-600' : 'text-red-600'
+                    report.netProfit > 0 ? 'text-green-600' : 'text-red-600'
                   }`}>
-                    {report.profit > 0 ? '+' : ''}{report.profit.toLocaleString()} ETB
+                    {report.netProfit > 0 ? '+' : ''}{report.netProfit.toLocaleString()} ETB
                   </span>
                 </div>
 
@@ -71,11 +136,11 @@ const Reports: React.FC = () => {
 
                 {/* Download Button */}
                 <Button 
-                  onClick={() => handleDownload(report.reportUrl, report.week)}
+                  onClick={() => handleDownload(report)}
                   className="w-full bg-blue-600 hover:bg-blue-700"
                 >
                   <Download className="mr-2 h-4 w-4" />
-                  Download PDF Report
+                  View PDF Report
                 </Button>
               </CardContent>
             </Card>
@@ -91,18 +156,18 @@ const Reports: React.FC = () => {
           <CardContent>
             <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
               <div className="text-center p-4 bg-blue-50 rounded-lg border border-blue-100">
-                <div className="text-2xl font-bold text-blue-600">{mockWeeklyReports.length}</div>
+                <div className="text-2xl font-bold text-blue-600">{weeklyReports.length}</div>
                 <div className="text-sm text-blue-800">Total Reports</div>
               </div>
               <div className="text-center p-4 bg-green-50 rounded-lg border border-green-100">
                 <div className="text-2xl font-bold text-green-600">
-                  {mockWeeklyReports.filter(r => r.profit > 0).length}
+                  {weeklyReports.filter(r => r.netProfit > 0).length}
                 </div>
                 <div className="text-sm text-green-800">Profitable Weeks</div>
               </div>
               <div className="text-center p-4 bg-amber-50 rounded-lg border border-amber-100">
                 <div className="text-2xl font-bold text-amber-600">
-                  {mockWeeklyReports.reduce((sum, r) => sum + r.profit, 0).toLocaleString()} ETB
+                  {weeklyReports.reduce((sum, r) => sum + r.netProfit, 0).toLocaleString()} ETB
                 </div>
                 <div className="text-sm text-amber-800">Total Profit</div>
               </div>

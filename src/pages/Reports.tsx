@@ -22,8 +22,10 @@ const Reports: React.FC = () => {
     setError(null);
     try {
       const reports = await getWeeklySummaries();
+      // Ensure reports is an array before mapping
+      const reportsArray = Array.isArray(reports) ? reports : [];
       // Map the reports to the correct format
-      const mappedReports = reports.map((report: any) => ({
+      const mappedReports = reportsArray.map((report: any) => ({
         ...report,
         weekStart: report.week_start,
         weekEnd: report.week_end,

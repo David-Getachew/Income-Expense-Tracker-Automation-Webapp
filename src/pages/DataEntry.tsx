@@ -76,6 +76,8 @@ const DataEntry: React.FC = () => {
         processed: false
       };
 
+      console.log('Submitting transaction data:', transactionData);
+      
       // Submit to Supabase
       const newTransaction = await createTransaction(transactionData);
 

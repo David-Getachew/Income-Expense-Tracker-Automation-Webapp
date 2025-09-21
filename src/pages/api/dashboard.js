@@ -7,26 +7,6 @@ import { validateOwner } from '../../lib/auth.js';
 // GET /api/dashboard
 export async function handleGetDashboard(req, res) {
   try {
-    // Validate authorization
-    const authHeader = req.headers.authorization;
-    if (!authHeader || !authHeader.startsWith('Bearer ')) {
-      return res.status(401).json({
-        success: false,
-        data: null,
-        error: 'Missing or invalid authorization header'
-      });
-    }
-
-    const token = authHeader.substring(7); // Remove 'Bearer ' prefix
-    const isValidOwner = await validateOwner(token);
-    
-    if (!isValidOwner) {
-      return res.status(401).json({
-        success: false,
-        data: null,
-        error: 'Unauthorized access'
-      });
-    }
 
     const { start, end, granularity = 'auto' } = req.query;
 
@@ -88,11 +68,7 @@ export async function handleGetDashboard(req, res) {
         netProfit: parseFloat(row.net_profit) || 0
       }));
 
-      return res.status(200).json({
-        success: true,
-        data: normalizedData,
-        error: null
-      });
+      return res.status(200).json(normalizedData);
     }
 
     // Fall back to direct query based on granularity
@@ -113,11 +89,7 @@ export async function handleGetDashboard(req, res) {
             netProfit: parseFloat(row.net_profit) || 0
           }));
 
-          return res.status(200).json({
-            success: true,
-            data: normalizedData,
-            error: null
-          });
+          return res.status(200).json(normalizedData);
         }
       } catch (rpcErr) {
         console.log('RPC get_daily_summaries not available, falling back to direct query');
@@ -174,11 +146,7 @@ export async function handleGetDashboard(req, res) {
       const result = Array.from(dateMap.values());
       result.sort((a, b) => new Date(a.label).getTime() - new Date(b.label).getTime());
 
-      return res.status(200).json({
-        success: true,
-        data: result,
-        error: null
-      });
+      return res.status(200).json(result);
     } else if (effectiveGranularity === 'weekly') {
       // Try weekly summaries RPC
       try {
@@ -196,11 +164,7 @@ export async function handleGetDashboard(req, res) {
             netProfit: parseFloat(row.net_profit) || 0
           }));
 
-          return res.status(200).json({
-            success: true,
-            data: normalizedData,
-            error: null
-          });
+          return res.status(200).json(normalizedData);
         }
       } catch (rpcErr) {
         console.log('RPC get_weekly_summaries not available, falling back to direct query');
@@ -268,19 +232,11 @@ export async function handleGetDashboard(req, res) {
       const result = Array.from(weekMap.values());
       result.sort((a, b) => new Date(a.label.split(' to ')[0]).getTime() - new Date(b.label.split(' to ')[0]).getTime());
 
-      return res.status(200).json({
-        success: true,
-        data: result,
-        error: null
-      });
+      return res.status(200).json(result);
     }
 
     // Default case - return empty array
-    return res.status(200).json({
-      success: true,
-      data: [],
-      error: null
-    });
+    return res.status(200).json([]);
   } catch (err) {
     console.error('Error in handleGetDashboard:', err);
     return res.status(500).json({

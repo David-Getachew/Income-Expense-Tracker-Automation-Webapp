@@ -61,9 +61,9 @@ export default async function handler(req, res) {
 
       const out = Array.from(agg.entries()).map(([category, total]) => ({
         category,
-        amount: Number(total.toFixed(2)),
+        total: Number(total.toFixed(2)),
         percent: grand_total === 0 ? 0 : Number(((total / grand_total) * 100).toFixed(2))
-      })).sort((a,b) => b.amount - a.amount);
+      })).sort((a,b) => b.total - a.total);
 
       data = out;
     }

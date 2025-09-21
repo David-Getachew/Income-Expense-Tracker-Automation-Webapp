@@ -16,6 +16,8 @@ const sendCors = (res) => {
   res.setHeader('Access-Control-Allow-Headers', 'Content-Type, Authorization');
 };
 
+const isValidDateISO = d => /^\d{4}-\d{2}-\d{2}$/.test(d) && !Number.isNaN(new Date(d).getTime());
+
 export default async function handler(req, res) {
   sendCors(res);
   if (req.method === 'OPTIONS') return res.status(204).end();
@@ -66,82 +68,49 @@ export default async function handler(req, res) {
 
   if (req.method === 'POST') {
     try {
-      const b = req.body || {};
+      const body = req.body || {};
+      console.log('[transactions] keys:', Object.keys(body));
+
       // Handle both snake_case and camelCase field names
-      // Handle both snake_case and camelCase field names
-      const item_name = b.item_name || b.itemName || b.item;
-      const quantity = Number.isFinite(Number(b.quantity)) ? parseInt(b.quantity, 10) : NaN;
-      const price_per_quantity = Number.isFinite(Number(b.price_per_quantity ?? b.pricePerUnit)) ? Number(b.price_per_quantity ?? b.pricePerUnit) : NaN;
-      const item_type = (b.item_type || b.itemType || '').toString().toLowerCase();
-      const category = b.category || b.customCategory;
-      const date = b.date;
-      // Always set processed to false as requested
-      const processed = false;
+      const item_name = body.item_name || body.itemName || body.item;
+      const quantity = body.quantity;
+      const price_per_quantity = body.price_per_quantity || body.pricePerUnit || body.pricePerQuantity;
+      const item_type = body.item_type || body.itemType || body.entryType;
+      const category = body.category;
+      const date = body.date;
 
       const missing = [];
-      const invalid = [];
-      if (!item_name) missing.push('item_name');
-      if (isNaN(quantity)) invalid.push('quantity');
-      if (isNaN(price_per_quantity)) invalid.push('price_per_quantity');
-      if (!item_type || !['income','expense'].includes(item_type)) invalid.push('item_type');
-      if (!category) missing.push('category');
-      if (!date || !/^\d{4}-\d{2}-\d{2}$/.test(date)) invalid.push('date');
+      if (!item_name || typeof item_name !== 'string') missing.push('item_name');
+      if (!Number.isInteger(Number(quantity)) || Number(quantity) <= 0) missing.push('quantity');
+      if (price_per_quantity === undefined || isNaN(Number(price_per_quantity))) missing.push('price_per_quantity');
+      const itemType = (item_type || '').toString().toLowerCase();
+      if (!['income','expense'].includes(itemType)) missing.push('item_type');
+      if (!category || typeof category !== 'string') missing.push('category');
+      if (!isValidDateISO(date)) missing.push('date');
 
-      // Log the request body for debugging
-      console.log('Transaction POST request body:', JSON.stringify(b, null, 2));
-      
-      if (missing.length || invalid.length) {
-        console.warn('Bad transaction request:', { missing, invalid });
-        return res.status(400).json({ 
-          error: 'Missing or invalid fields', 
-          details: [...missing, ...invalid] 
-        });
-      }
+      if (missing.length) return res.status(400).json({ error: 'Missing or invalid fields', details: missing });
 
-      // Try RPC insert_transaction first
-      let insertResult = null;
-      const rpcParams = {
-        p_item_name: item_name,
-        p_quantity: quantity,
-        p_price_per_quantity: price_per_quantity,
-        p_item_type: item_type,
-        p_category: category,
-        p_date: date,
-        p_processed: processed
+      const payload = {
+        item_name: item_name,
+        quantity: Number(quantity),
+        price_per_quantity: Number(price_per_quantity),
+        item_type: itemType,
+        category: category,
+        date: date,
+        processed: body.processed ?? false
       };
 
-      try {
-        const { data, error } = await supabaseAdmin.rpc('insert_transaction', rpcParams);
-        if (!error && data) insertResult = data;
-      } catch (e) {
-        // continue to fallback
+      const { data, error } = await supabaseAdmin.from('daily_income_expense').insert([payload]).select('*').limit(1);
+
+      if (error) {
+        console.error('[transactions] insert error', error);
+        return res.status(500).json({ error: 'insert_failed', details: error.message });
       }
 
-      if (!insertResult) {
-        const { data, error } = await supabaseAdmin
-          .from('daily_income_expense')
-          .insert([{
-            item_name, quantity, price_per_quantity, item_type, category, date, processed
-          }])
-          .select()
-          .single();
-        if (error) throw error;
-        insertResult = data;
-      }
-
-      console.info(`Inserted transaction: ${item_name} | ${date} | ${item_type} | qty=${quantity} | price=${price_per_quantity}`);
-      // Return the inserted data as required
-      return res.status(201).json(insertResult || { 
-        item_name, 
-        quantity, 
-        price_per_quantity, 
-        item_type, 
-        category, 
-        date 
-      });
+      return res.status(201).json({ success: true, row: data[0] });
     } catch (err) {
-      console.error('transactions POST error:', err?.message || err);
-      return res.status(500).json({ error: 'server error' });
+      console.error('[transactions] unexpected', err);
+      return res.status(500).json({ error: err.message || 'unexpected' });
     }
   }
 

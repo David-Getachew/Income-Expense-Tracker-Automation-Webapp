@@ -60,8 +60,8 @@ export default async function handler(req, res) {
       });
 
       const out = Array.from(agg.entries())
-        .map(([item_name, total_revenue]) => ({ item: item_name, revenue: total_revenue }))
-        .sort((a,b) => b.revenue - a.revenue)
+        .map(([item_name, total_revenue]) => ({ item_name, total_revenue }))
+        .sort((a,b) => b.total_revenue - a.total_revenue)
         .slice(0, p_limit);
 
       data = out;

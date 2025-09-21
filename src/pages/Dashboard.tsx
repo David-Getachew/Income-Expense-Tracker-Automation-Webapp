@@ -36,16 +36,25 @@ import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover
 import { Calendar } from '@/components/ui/calendar';
 
 const Dashboard: React.FC = () => {
+  // Initialize default date range (last 30 days)
+  const now = new Date();
+  const defaultEnd = new Date(now);
+  const defaultStart = new Date(now);
+  defaultStart.setDate(now.getDate() - 30);
+
+  // Main date filter state (controlled component)
+  const [startDate, setStartDate] = useState<Date>(defaultStart);
+  const [endDate, setEndDate] = useState<Date>(defaultEnd);
+
   // Independent filter states
   const [graphFilter, setGraphFilter] = useState<{ 
     start: Date | undefined; 
     end: Date | undefined;
     granularity: 'auto' | 'daily' | 'weekly';
   }>(() => {
-    const today = new Date();
     return {
-      start: subDays(today, 30),
-      end: today,
+      start: defaultStart,
+      end: defaultEnd,
       granularity: 'auto'
     };
   });
@@ -54,21 +63,29 @@ const Dashboard: React.FC = () => {
     start: Date | undefined; 
     end: Date | undefined 
   }>(() => {
-    const today = new Date();
     return {
-      start: subDays(today, 30),
-      end: today
+      start: defaultStart,
+      end: defaultEnd
     };
   });
+
+  // Independent section date states
+  const [topItemsStartDate, setTopItemsStartDate] = useState<Date>(defaultStart);
+  const [topItemsEndDate, setTopItemsEndDate] = useState<Date>(defaultEnd);
+  
+  const [expensesStartDate, setExpensesStartDate] = useState<Date>(defaultStart);
+  const [expensesEndDate, setExpensesEndDate] = useState<Date>(defaultEnd);
+  
+  const [transactionsStartDate, setTransactionsStartDate] = useState<Date>(defaultStart);
+  const [transactionsEndDate, setTransactionsEndDate] = useState<Date>(defaultEnd);
 
   const [topItemsFilter, setTopItemsFilter] = useState<{ 
     start: Date | undefined; 
     end: Date | undefined 
   }>(() => {
-    const today = new Date();
     return {
-      start: subDays(today, 30),
-      end: today
+      start: defaultStart,
+      end: defaultEnd
     };
   });
 
@@ -76,10 +93,9 @@ const Dashboard: React.FC = () => {
     start: Date | undefined; 
     end: Date | undefined 
   }>(() => {
-    const today = new Date();
     return {
-      start: subDays(today, 30),
-      end: today
+      start: defaultStart,
+      end: defaultEnd
     };
   });
 
@@ -87,12 +103,27 @@ const Dashboard: React.FC = () => {
     start: Date | undefined; 
     end: Date | undefined 
   }>(() => {
-    const today = new Date();
     return {
-      start: subDays(today, 30),
-      end: today
+      start: defaultStart,
+      end: defaultEnd
     };
   });
+
+  // Main date picker handler (controlled component)
+  const handleDateRangeChange = (range: { from: Date | undefined; to: Date | undefined } | undefined) => {
+    if (range && range.from) {
+      setStartDate(range.from);
+      setEndDate(range.to || range.from);
+      
+      // Update all filter states with the new range
+      const newRange = { start: range.from, end: range.to || range.from };
+      setKpiFilter(newRange);
+      setGraphFilter(prev => ({ ...prev, ...newRange }));
+      setTopItemsFilter(newRange);
+      setExpensesFilter(newRange);
+      setTransactionsFilter(newRange);
+    }
+  };
 
   // Wrapper functions to handle type conversion for Calendar onSelect handlers
   const handleGraphFilterSelect = (range: { start: Date | undefined; end?: Date | undefined } | undefined) => {
@@ -118,36 +149,37 @@ const Dashboard: React.FC = () => {
     }
   };
 
-  const handleTopItemsFilterSelect = (range: { start: Date | undefined; end?: Date | undefined } | undefined) => {
-    if (range) {
+  // Independent section date picker handlers
+  const handleTopItemsDateChange = (range: { from: Date | undefined; to: Date | undefined } | undefined) => {
+    if (range && range.from) {
+      setTopItemsStartDate(range.from);
+      setTopItemsEndDate(range.to || range.from);
       setTopItemsFilter({ 
-        start: range.start, 
-        end: range.end || range.start 
+        start: range.from, 
+        end: range.to || range.start 
       });
-    } else {
-      setTopItemsFilter({ start: undefined, end: undefined });
     }
   };
 
-  const handleExpensesFilterSelect = (range: { start: Date | undefined; end?: Date | undefined } | undefined) => {
-    if (range) {
+  const handleExpensesDateChange = (range: { from: Date | undefined; to: Date | undefined } | undefined) => {
+    if (range && range.from) {
+      setExpensesStartDate(range.from);
+      setExpensesEndDate(range.to || range.from);
       setExpensesFilter({ 
-        start: range.start, 
-        end: range.end || range.start 
+        start: range.from, 
+        end: range.to || range.start 
       });
-    } else {
-      setExpensesFilter({ start: undefined, end: undefined });
     }
   };
 
-  const handleTransactionsFilterSelect = (range: { start: Date | undefined; end?: Date | undefined } | undefined) => {
-    if (range) {
+  const handleTransactionsDateChange = (range: { from: Date | undefined; to: Date | undefined } | undefined) => {
+    if (range && range.from) {
+      setTransactionsStartDate(range.from);
+      setTransactionsEndDate(range.to || range.from);
       setTransactionsFilter({ 
-        start: range.start, 
-        end: range.end || range.start 
+        start: range.from, 
+        end: range.to || range.start 
       });
-    } else {
-      setTransactionsFilter({ start: undefined, end: undefined });
     }
   };
 
@@ -193,6 +225,16 @@ const Dashboard: React.FC = () => {
     transactions: null
   });
 
+  // Sync main date state with all filters on mount
+  useEffect(() => {
+    const newRange = { start: startDate, end: endDate };
+    setKpiFilter(newRange);
+    setGraphFilter(prev => ({ ...prev, ...newRange }));
+    setTopItemsFilter(newRange);
+    setExpensesFilter(newRange);
+    setTransactionsFilter(newRange);
+  }, []); // Only run on mount
+
   // Fetch KPIs when kpiFilter changes
   useEffect(() => {
     const fetchKpis = async () => {
@@ -227,7 +269,7 @@ const Dashboard: React.FC = () => {
     fetchKpis();
   }, [kpiFilter]);
 
-  // Fetch graph data when graphFilter changes
+  // Fetch graph data when main date or granularity changes
   useEffect(() => {
     const fetchGraphData = async () => {
       setLoading(prev => ({ ...prev, graph: true }));
@@ -235,21 +277,21 @@ const Dashboard: React.FC = () => {
       
       try {
         const response = await getDashboardData(
-          graphFilter.start ? format(graphFilter.start, 'yyyy-MM-dd') : undefined,
-          graphFilter.end ? format(graphFilter.end, 'yyyy-MM-dd') : undefined,
+          startDate ? format(startDate, 'yyyy-MM-dd') : undefined,
+          endDate ? format(endDate, 'yyyy-MM-dd') : undefined,
           graphFilter.granularity
         );
         
         // Handle the response format from the API
-        // API returns { success: true, data: [...], error: null }
-        const dashboardData = response?.data || [];
+        // API returns array directly
+        const dashboardData = Array.isArray(response) ? response : [];
         
         // Map dashboard data to match chart expectations
-        const mappedDashboardData = Array.isArray(dashboardData) ? dashboardData.map((stat: any) => ({
+        const mappedDashboardData = dashboardData.map((stat: any) => ({
           date: stat.label || stat.date,
           totalIncome: stat.totalIncome || 0,
           totalExpense: stat.totalExpense || 0
-        })) : [];
+        }));
         setDailyStats(mappedDashboardData);
       } catch (err: any) {
         console.error('Error fetching graph data:', err);
@@ -260,7 +302,7 @@ const Dashboard: React.FC = () => {
     };
 
     fetchGraphData();
-  }, [graphFilter]);
+  }, [startDate, endDate, graphFilter.granularity]);
 
   // Fetch top items when topItemsFilter changes
   useEffect(() => {
@@ -277,8 +319,8 @@ const Dashboard: React.FC = () => {
         
         // Map top items to match chart expectations
         const mappedTopItems = Array.isArray(topItemsData) ? topItemsData.map((item: any) => ({
-          itemName: item.item || item.itemName,
-          revenue: item.revenue || item.total_revenue || 0
+          itemName: item.item_name || item.item || item.itemName,
+          revenue: item.total_revenue || item.revenue || 0
         })) : [];
         setTopItems(mappedTopItems);
       } catch (err: any) {
@@ -307,7 +349,7 @@ const Dashboard: React.FC = () => {
         // Map category breakdown to match chart expectations
         const mappedCategoryBreakdown = Array.isArray(categoryBreakdownData) ? categoryBreakdownData.map((item: any) => ({
           category: item.category,
-          value: item.amount || item.value || 0,
+          value: item.total || item.amount || item.value || 0,
           percent: item.percent || 0
         })) : [];
         setCategoryBreakdown(mappedCategoryBreakdown);
@@ -400,6 +442,24 @@ const Dashboard: React.FC = () => {
     return `${format(range.start, "MMM dd")} - ${format(range.end, "MMM dd")}`;
   };
 
+  // Format main date range for display
+  const formatMainDateRange = () => {
+    return `${format(startDate, "MMM dd")} - ${format(endDate, "MMM dd")}`;
+  };
+
+  // Format section date ranges for display
+  const formatTopItemsDateRange = () => {
+    return `${format(topItemsStartDate, "MMM dd")} - ${format(topItemsEndDate, "MMM dd")}`;
+  };
+
+  const formatExpensesDateRange = () => {
+    return `${format(expensesStartDate, "MMM dd")} - ${format(expensesEndDate, "MMM dd")}`;
+  };
+
+  const formatTransactionsDateRange = () => {
+    return `${format(transactionsStartDate, "MMM dd")} - ${format(transactionsEndDate, "MMM dd")}`;
+  };
+
   // Format daily stats description
   const formatDailyStatsDescription = () => {
     if (!graphFilter.start || !graphFilter.end) return "All time performance";
@@ -431,35 +491,9 @@ const Dashboard: React.FC = () => {
           </div>
         </div>
 
-        {/* KPI Cards with KPI Filter */}
-        <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
-          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6 flex-grow">
-            <KPICard
-              title="Total Income"
-              value={`${kpiData.totalIncome.toLocaleString()} ETB`}
-              icon={DollarSign}
-              isPositive={true}
-            />
-            <KPICard
-              title="Total Expenses"
-              value={`${kpiData.totalExpenses.toLocaleString()} ETB`}
-              icon={TrendingDown}
-              isPositive={false}
-            />
-            <KPICard
-              title="Profit/Loss"
-              value={`${kpiData.netProfit.toLocaleString()} ETB`}
-              icon={kpiData.netProfit >= 0 ? TrendingUp : TrendingDown}
-              isPositive={kpiData.netProfit >= 0}
-            />
-            <KPICard
-              title="Profit Margin"
-              value={`${kpiData.profitMargin.toFixed(1)}%`}
-              icon={Percent}
-              isPositive={kpiData.profitMargin >= 0}
-            />
-          </div>
-          <div className="flex-shrink-0">
+        {/* Date Filter - Above KPI Cards */}
+        <div className="flex justify-end">
+          <form onSubmit={(e) => e.preventDefault()}>
             <Popover>
               <PopoverTrigger asChild>
                 <Button
@@ -468,20 +502,48 @@ const Dashboard: React.FC = () => {
                   className="text-left font-normal"
                 >
                   <CalendarIcon className="mr-2 h-4 w-4" />
-                  <span>{formatDateRange(kpiFilter)}</span>
+                  <span>{formatMainDateRange()}</span>
                 </Button>
               </PopoverTrigger>
               <PopoverContent className="w-auto p-0" align="end">
                 <Calendar
                   mode="range"
-                  selected={{ from: kpiFilter.start, to: kpiFilter.end }}
-                  onSelect={(range) => handleKpiFilterSelect(range as any)}
+                  selected={{ from: startDate, to: endDate }}
+                  onSelect={(range) => handleDateRangeChange(range as any)}
                   numberOfMonths={2}
                   initialFocus
                 />
               </PopoverContent>
             </Popover>
-          </div>
+          </form>
+        </div>
+
+        {/* KPI Cards */}
+        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
+          <KPICard
+            title="Total Income"
+            value={`${kpiData.totalIncome.toLocaleString()} ETB`}
+            icon={DollarSign}
+            isPositive={true}
+          />
+          <KPICard
+            title="Total Expenses"
+            value={`${kpiData.totalExpenses.toLocaleString()} ETB`}
+            icon={TrendingDown}
+            isPositive={false}
+          />
+          <KPICard
+            title="Profit/Loss"
+            value={`${kpiData.netProfit.toLocaleString()} ETB`}
+            icon={kpiData.netProfit >= 0 ? TrendingUp : TrendingDown}
+            isPositive={kpiData.netProfit >= 0}
+          />
+          <KPICard
+            title="Profit Margin"
+            value={`${kpiData.profitMargin.toFixed(1)}%`}
+            icon={Percent}
+            isPositive={kpiData.profitMargin >= 0}
+          />
         </div>
 
         {/* Daily Income vs Expenses - Full width */}
@@ -493,27 +555,6 @@ const Dashboard: React.FC = () => {
                 <CardDescription>{formatDailyStatsDescription()}</CardDescription>
               </div>
               <div className="flex items-center gap-2">
-                <Popover>
-                  <PopoverTrigger asChild>
-                    <Button
-                      variant="outline"
-                      size="sm"
-                      className="text-left font-normal"
-                    >
-                      <CalendarIcon className="mr-2 h-4 w-4" />
-                      <span>{formatDateRange(graphFilter)}</span>
-                    </Button>
-                  </PopoverTrigger>
-                  <PopoverContent className="w-auto p-0" align="end">
-                    <Calendar
-                      mode="range"
-                      selected={{ from: graphFilter.start, to: graphFilter.end }}
-                      onSelect={(range) => handleGraphFilterSelect(range as any)}
-                      numberOfMonths={2}
-                      initialFocus
-                    />
-                  </PopoverContent>
-                </Popover>
                 <Select 
                   value={graphFilter.granularity} 
                   onValueChange={handleGranularityChange}
@@ -581,27 +622,29 @@ const Dashboard: React.FC = () => {
                 <CardTitle>Top Items by Revenue</CardTitle>
                 <CardDescription>Best performing items</CardDescription>
               </div>
-              <Popover>
-                <PopoverTrigger asChild>
-                  <Button
-                    variant="outline"
-                    size="sm"
-                    className="text-left font-normal"
-                  >
-                    <CalendarIcon className="mr-2 h-4 w-4" />
-                    <span>{formatDateRange(topItemsFilter)}</span>
-                  </Button>
-                </PopoverTrigger>
-                <PopoverContent className="w-auto p-0" align="end">
-                  <Calendar
-                    mode="range"
-                    selected={{ from: topItemsFilter.start, to: topItemsFilter.end }}
-                    onSelect={(range) => handleTopItemsFilterSelect(range as any)}
-                    numberOfMonths={2}
-                    initialFocus
-                  />
-                </PopoverContent>
-              </Popover>
+              <form onSubmit={(e) => e.preventDefault()}>
+                <Popover>
+                  <PopoverTrigger asChild>
+                    <Button
+                      variant="outline"
+                      size="sm"
+                      className="text-left font-normal"
+                    >
+                      <CalendarIcon className="mr-2 h-4 w-4" />
+                      <span>{formatTopItemsDateRange()}</span>
+                    </Button>
+                  </PopoverTrigger>
+                  <PopoverContent className="w-auto p-0" align="end">
+                    <Calendar
+                      mode="range"
+                      selected={{ from: topItemsStartDate, to: topItemsEndDate }}
+                      onSelect={(range) => handleTopItemsDateChange(range as any)}
+                      numberOfMonths={2}
+                      initialFocus
+                    />
+                  </PopoverContent>
+                </Popover>
+              </form>
             </CardHeader>
             <CardContent>
               {loading.topItems ? (
@@ -640,27 +683,29 @@ const Dashboard: React.FC = () => {
                 <CardTitle>Expenses by Category</CardTitle>
                 <CardDescription>Distribution of expense categories</CardDescription>
               </div>
-              <Popover>
-                <PopoverTrigger asChild>
-                  <Button
-                    variant="outline"
-                    size="sm"
-                    className="text-left font-normal"
-                  >
-                    <CalendarIcon className="mr-2 h-4 w-4" />
-                    <span>{formatDateRange(expensesFilter)}</span>
-                  </Button>
-                </PopoverTrigger>
-                <PopoverContent className="w-auto p-0" align="end">
-                  <Calendar
-                    mode="range"
-                    selected={{ from: expensesFilter.start, to: expensesFilter.end }}
-                    onSelect={(range) => handleExpensesFilterSelect(range as any)}
-                    numberOfMonths={2}
-                    initialFocus
-                  />
-                </PopoverContent>
-              </Popover>
+              <form onSubmit={(e) => e.preventDefault()}>
+                <Popover>
+                  <PopoverTrigger asChild>
+                    <Button
+                      variant="outline"
+                      size="sm"
+                      className="text-left font-normal"
+                    >
+                      <CalendarIcon className="mr-2 h-4 w-4" />
+                      <span>{formatExpensesDateRange()}</span>
+                    </Button>
+                  </PopoverTrigger>
+                  <PopoverContent className="w-auto p-0" align="end">
+                    <Calendar
+                      mode="range"
+                      selected={{ from: expensesStartDate, to: expensesEndDate }}
+                      onSelect={(range) => handleExpensesDateChange(range as any)}
+                      numberOfMonths={2}
+                      initialFocus
+                    />
+                  </PopoverContent>
+                </Popover>
+              </form>
             </CardHeader>
             <CardContent>
               {loading.expenses ? (
@@ -720,27 +765,29 @@ const Dashboard: React.FC = () => {
                 <CardDescription>All business transactions</CardDescription>
               </div>
               <div className="flex items-center gap-2">
-                <Popover>
-                  <PopoverTrigger asChild>
-                    <Button
-                      variant="outline"
-                      size="sm"
-                      className="text-left font-normal"
-                    >
-                      <CalendarIcon className="mr-2 h-4 w-4" />
-                      <span>{formatDateRange(transactionsFilter)}</span>
-                    </Button>
-                  </PopoverTrigger>
-                  <PopoverContent className="w-auto p-0" align="end">
-                    <Calendar
-                      mode="range"
-                      selected={{ from: transactionsFilter.start, to: transactionsFilter.end }}
-                      onSelect={(range) => handleTransactionsFilterSelect(range as any)}
-                      numberOfMonths={2}
-                      initialFocus
-                    />
-                  </PopoverContent>
-                </Popover>
+                <form onSubmit={(e) => e.preventDefault()}>
+                  <Popover>
+                    <PopoverTrigger asChild>
+                      <Button
+                        variant="outline"
+                        size="sm"
+                        className="text-left font-normal"
+                      >
+                        <CalendarIcon className="mr-2 h-4 w-4" />
+                        <span>{formatTransactionsDateRange()}</span>
+                      </Button>
+                    </PopoverTrigger>
+                    <PopoverContent className="w-auto p-0" align="end">
+                      <Calendar
+                        mode="range"
+                        selected={{ from: transactionsStartDate, to: transactionsEndDate }}
+                        onSelect={(range) => handleTransactionsDateChange(range as any)}
+                        numberOfMonths={2}
+                        initialFocus
+                      />
+                    </PopoverContent>
+                  </Popover>
+                </form>
               </div>
             </CardHeader>
             <CardContent>
@@ -779,7 +826,7 @@ const Dashboard: React.FC = () => {
                           <TableCell>
                             <Badge 
                               variant={transaction.item_type.toLowerCase() === 'income' ? 'default' : 'destructive'}
-                              className={transaction.item_type.toLowerCase() === 'income' ? 'bg-green-100 text-green-800' : 'bg-red-100 text-red-800'}
+                              className={transaction.item_type.toLowerCase() === 'income' ? 'bg-green-100 text-green-800 hover:bg-green-200 hover:text-green-900' : 'bg-red-100 text-red-800 hover:bg-red-200 hover:text-red-900'}
                             >
                               {transaction.item_type}
                             </Badge>

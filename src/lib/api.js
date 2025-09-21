@@ -122,8 +122,8 @@ export const getDashboardData = async (start, end, granularity = 'auto') => {
   
   const response = await apiRequest(`/dashboard?${queryParams.toString()}`, { headers });
   // Handle the response format from the API
-  // API returns { success: true, data: [...], error: null }
-  return response?.data || [];
+  // API returns array directly
+  return Array.isArray(response) ? response : [];
 };
 
 // KPIs API

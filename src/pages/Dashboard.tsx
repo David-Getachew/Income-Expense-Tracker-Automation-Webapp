@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import Layout from '@/components/Layout';
 import KPICard from '@/components/KPICard';
 import DateFilter from '@/components/DateFilter';
@@ -30,53 +30,107 @@ import {
   CalendarIcon
 } from 'lucide-react';
 import { 
-  mockTransactions, 
-  mockDailyStats, 
-  mockTopItems, 
-  mockCategoryBreakdown 
-} from '@/data/mockData';
-import { format, isWithinInterval } from 'date-fns';
+  format, 
+  isWithinInterval, 
+  subDays, 
+  startOfMonth, 
+  endOfMonth, 
+  differenceInDays 
+} from 'date-fns';
 import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
 import { Calendar } from '@/components/ui/calendar';
-
-// Mock data for top selling items
-const mockTopSellingItems = [
-  { "item": "Cappuccino", "revenue": 1200, "quantity": 45 },
-  { "item": "Falafel Sandwich", "revenue": 950, "quantity": 30 },
-  { "item": "Potato Chips", "revenue": 780, "quantity": 50 },
-  { "item": "Shiro Injera Plate", "revenue": 670, "quantity": 25 },
-  { "item": "Green Tea", "revenue": 540, "quantity": 40 },
-  { "item": "Samosa", "revenue": 430, "quantity": 35 }
-];
+import { getTransactions, getDashboardData, getKpis, getTopRevenueItems, getExpensesByCategory } from '@/lib/api';
 
 const Dashboard: React.FC = () => {
   // Global date filter state
   const [dateRange, setDateRange] = useState<{ 
     from: Date | undefined; 
     to: Date | undefined 
-  }>({ from: undefined, to: undefined });
+  }>(() => {
+    const today = new Date();
+    return {
+      from: subDays(today, 30),
+      to: today
+    };
+  });
 
   // Section-specific date filter states
   const [topItemsDateRange, setTopItemsDateRange] = useState<{ 
     from: Date | undefined; 
     to: Date | undefined 
-  }>({ from: undefined, to: undefined });
+  }>(() => {
+    const today = new Date();
+    return {
+      from: subDays(today, 30),
+      to: today
+    };
+  });
 
   const [categoryDateRange, setCategoryDateRange] = useState<{ 
     from: Date | undefined; 
     to: Date | undefined 
-  }>({ from: undefined, to: undefined });
+  }>(() => {
+    const today = new Date();
+    return {
+      from: subDays(today, 30),
+      to: today
+    };
+  });
 
   const [topSellingDateRange, setTopSellingDateRange] = useState<{ 
     from: Date | undefined; 
     to: Date | undefined 
-  }>({ from: undefined, to: undefined });
+  }>(() => {
+    const today = new Date();
+    return {
+      from: subDays(today, 30),
+      to: today
+    };
+  });
 
   // Transaction history filter state
   const [transactionDateRange, setTransactionDateRange] = useState<{ 
     from: Date | undefined; 
     to: Date | undefined 
-  }>({ from: undefined, to: undefined });
+  }>(() => {
+    const today = new Date();
+    return {
+      from: subDays(today, 30),
+      to: today
+    };
+  });
+
+  // Data states
+  const [transactions, setTransactions] = useState<any[]>([]);
+  const [dailyStats, setDailyStats] = useState<any[]>([]);
+  const [topItems, setTopItems] = useState<any[]>([]);
+  const [categoryBreakdown, setCategoryBreakdown] = useState<any[]>([]);
+  
+  // KPI states
+  const [kpiData, setKpiData] = useState({
+    totalIncome: 0,
+    totalExpenses: 0,
+    netProfit: 0,
+    profitMargin: 0
+  });
+  
+  // Loading states
+  const [loading, setLoading] = useState({
+    kpis: true,
+    graph: true,
+    topItems: true,
+    expenses: true,
+    transactions: true
+  });
+  
+  // Error states
+  const [error, setError] = useState({
+    kpis: null,
+    graph: null,
+    topItems: null,
+    expenses: null,
+    transactions: null
+  });
 
   // Transaction sorting state
   const [sortDirection, setSortDirection] = useState<'asc' | 'desc'>('desc');
@@ -85,99 +139,184 @@ const Dashboard: React.FC = () => {
   const [currentPage, setCurrentPage] = useState(1);
   const itemsPerPage = 7;
 
-  // Filter transactions based on date range
-  const filterTransactionsByDate = () => {
-    if (!dateRange.from || !dateRange.to) return mockTransactions;
-    
-    return mockTransactions.filter(transaction => {
-      const transactionDate = new Date(transaction.date);
-      return isWithinInterval(transactionDate, {
-        start: dateRange.from!,
-        end: dateRange.to!
-      });
-    });
-  };
+  // Fetch KPIs when dateRange changes
+  useEffect(() => {
+    const fetchKpis = async () => {
+      setLoading(prev => ({ ...prev, kpis: true }));
+      setError(prev => ({ ...prev, kpis: null }));
+      
+      try {
+        const kpiData = await getKpis(
+          dateRange.from ? format(dateRange.from, 'yyyy-MM-dd') : undefined,
+          dateRange.to ? format(dateRange.to, 'yyyy-MM-dd') : undefined
+        ) || { total_income: 0, total_expense: 0, net_income: 0 };
+        
+        const totalIncome = kpiData.total_income || 0;
+        const totalExpenses = kpiData.total_expense || 0;
+        const netProfit = kpiData.net_income || 0;
+        const profitMargin = totalIncome > 0 ? ((netProfit / totalIncome) * 100) : 0;
+        
+        setKpiData({
+          totalIncome,
+          totalExpenses,
+          netProfit,
+          profitMargin
+        });
+      } catch (err: any) {
+        console.error('Error fetching KPIs:', err);
+        setError(prev => ({ ...prev, kpis: err.message || 'Failed to load KPIs' }));
+      } finally {
+        setLoading(prev => ({ ...prev, kpis: false }));
+      }
+    };
 
-  // Filter daily stats based on date range
-  const filterDailyStatsByDate = () => {
-    if (!dateRange.from || !dateRange.to) return mockDailyStats;
-    
-    return mockDailyStats.filter(stat => {
-      const statDate = new Date(stat.date);
-      return isWithinInterval(statDate, {
-        start: dateRange.from!,
-        end: dateRange.to!
-      });
-    });
-  };
+    fetchKpis();
+  }, [dateRange]);
 
-  // Filter top items based on date range
-  const filterTopItemsByDate = () => {
-    // For now, we're using mock data, so we'll return all data
-    // In a real app, this would filter based on the date range
-    return mockTopItems;
-  };
+  // Fetch graph data when dateRange changes
+  useEffect(() => {
+    const fetchGraphData = async () => {
+      setLoading(prev => ({ ...prev, graph: true }));
+      setError(prev => ({ ...prev, graph: null }));
+      
+      try {
+        const response = await getDashboardData(
+          dateRange.from ? format(dateRange.from, 'yyyy-MM-dd') : undefined,
+          dateRange.to ? format(dateRange.to, 'yyyy-MM-dd') : undefined
+        );
+        
+        // Handle the response format from the API
+        // API returns { success: true, data: [...], error: null }
+        const dashboardData = response?.data || [];
+        
+        // Map dashboard data to match chart expectations
+        const mappedDashboardData = Array.isArray(dashboardData) ? dashboardData.map((stat: any) => ({
+          date: stat.label || stat.date,
+          income: stat.totalIncome || 0,
+          expense: stat.totalExpense || 0
+        })) : [];
+        setDailyStats(mappedDashboardData);
+      } catch (err: any) {
+        console.error('Error fetching graph data:', err);
+        setError(prev => ({ ...prev, graph: err.message || 'Failed to load graph data' }));
+      } finally {
+        setLoading(prev => ({ ...prev, graph: false }));
+      }
+    };
 
-  // Filter category breakdown based on date range
-  const filterCategoryBreakdownByDate = () => {
-    // For now, we're using mock data, so we'll return all data
-    // In a real app, this would filter based on the date range
-    return mockCategoryBreakdown.filter(item => item.value > 0);
-  };
+    fetchGraphData();
+  }, [dateRange]);
 
-  // Filter top selling items based on date range
-  const filterTopSellingItemsByDate = () => {
-    // For now, we're using mock data, so we'll return all data
-    // In a real app, this would filter based on the date range
-    return mockTopSellingItems;
-  };
+  // Fetch top items when topItemsDateRange changes
+  useEffect(() => {
+    const fetchTopItems = async () => {
+      setLoading(prev => ({ ...prev, topItems: true }));
+      setError(prev => ({ ...prev, topItems: null }));
+      
+      try {
+        const topItemsData = await getTopRevenueItems(
+          topItemsDateRange.from ? format(topItemsDateRange.from, 'yyyy-MM-dd') : undefined,
+          topItemsDateRange.to ? format(topItemsDateRange.to, 'yyyy-MM-dd') : undefined,
+          5
+        ) || [];
+        
+        // Map top items to match chart expectations
+        const mappedTopItems = Array.isArray(topItemsData) ? topItemsData.map((item: any) => ({
+          item: item.item || item.itemName,
+          total: item.revenue || item.total_revenue || 0
+        })) : [];
+        setTopItems(mappedTopItems);
+      } catch (err: any) {
+        console.error('Error fetching top items:', err);
+        setError(prev => ({ ...prev, topItems: err.message || 'Failed to load top items' }));
+      } finally {
+        setLoading(prev => ({ ...prev, topItems: false }));
+      }
+    };
 
-  // Filter transaction history based on its own date filter
-  const filterTransactionHistory = () => {
-    // If no date range is selected, return all transactions
-    if (!transactionDateRange || !transactionDateRange.from || !transactionDateRange.to) {
-      return mockTransactions;
-    }
-    
-    return mockTransactions.filter(transaction => {
-      const transactionDate = new Date(transaction.date);
-      return isWithinInterval(transactionDate, {
-        start: transactionDateRange.from!,
-        end: transactionDateRange.to!
-      });
-    });
-  };
+    fetchTopItems();
+  }, [topItemsDateRange]);
 
-  // Sort transaction history
-  const sortedTransactions = React.useMemo(() => {
-    const filtered = filterTransactionHistory();
-    return [...filtered].sort((a, b) => {
+  // Fetch expenses by category when categoryDateRange changes
+  useEffect(() => {
+    const fetchExpensesByCategory = async () => {
+      setLoading(prev => ({ ...prev, expenses: true }));
+      setError(prev => ({ ...prev, expenses: null }));
+      
+      try {
+        const categoryBreakdownData = await getExpensesByCategory(
+          categoryDateRange.from ? format(categoryDateRange.from, 'yyyy-MM-dd') : undefined,
+          categoryDateRange.to ? format(categoryDateRange.to, 'yyyy-MM-dd') : undefined
+        ) || [];
+        
+        // Map category breakdown to match chart expectations
+        const mappedCategoryBreakdown = Array.isArray(categoryBreakdownData) ? categoryBreakdownData.map((item: any) => ({
+          category: item.category,
+          value: item.amount || item.total || item.value || 0,
+          percent: item.percent || 0
+        })) : [];
+        setCategoryBreakdown(mappedCategoryBreakdown);
+      } catch (err: any) {
+        console.error('Error fetching expenses by category:', err);
+        setError(prev => ({ ...prev, expenses: err.message || 'Failed to load expenses data' }));
+      } finally {
+        setLoading(prev => ({ ...prev, expenses: false }));
+      }
+    };
+
+    fetchExpensesByCategory();
+  }, [categoryDateRange]);
+
+  // Fetch transactions when transactionDateRange changes
+  useEffect(() => {
+    const fetchTransactions = async () => {
+      setLoading(prev => ({ ...prev, transactions: true }));
+      setError(prev => ({ ...prev, transactions: null }));
+      
+      try {
+        const transactionsData = await getTransactions({
+          start: transactionDateRange.from ? format(transactionDateRange.from, 'yyyy-MM-dd') : undefined,
+          end: transactionDateRange.to ? format(transactionDateRange.to, 'yyyy-MM-dd') : undefined
+        }) || { rows: [] };
+        
+        // Map transactions to correct format
+        const mappedTransactions = Array.isArray(transactionsData.rows) ? transactionsData.rows.map((t: any) => ({
+          id: t.id,
+          item_name: t.item_name,
+          quantity: t.quantity,
+          price_per_quantity: t.price_per_quantity,
+          item_type: t.item_type,
+          category: t.category,
+          date: t.date
+        })) : [];
+        setTransactions(mappedTransactions);
+      } catch (err: any) {
+        console.error('Error fetching transactions:', err);
+        setError(prev => ({ ...prev, transactions: err.message || 'Failed to load transactions' }));
+      } finally {
+        setLoading(prev => ({ ...prev, transactions: false }));
+      }
+    };
+
+    fetchTransactions();
+  }, [transactionDateRange]);
+
+  // Filter transaction history
+  const filteredTransactions = React.useMemo(() => {
+    return [...transactions].sort((a, b) => {
       const dateA = new Date(a.date);
       const dateB = new Date(b.date);
       return sortDirection === 'asc' ? 
         dateA.getTime() - dateB.getTime() : 
         dateB.getTime() - dateA.getTime();
     });
-  }, [transactionDateRange, sortDirection]);
+  }, [transactions, sortDirection]);
 
   // Paginate transactions
   const paginatedTransactions = React.useMemo(() => {
     const startIndex = (currentPage - 1) * itemsPerPage;
-    return sortedTransactions.slice(startIndex, startIndex + itemsPerPage);
-  }, [sortedTransactions, currentPage]);
-
-  // Calculate KPIs based on filtered data
-  const filteredTransactions = filterTransactionsByDate();
-  const totalIncome = filteredTransactions
-    .filter(t => t.entryType === 'Income')
-    .reduce((sum, t) => sum + (t.quantity * t.pricePerUnit), 0);
-  
-  const totalExpenses = filteredTransactions
-    .filter(t => t.entryType === 'Expense')
-    .reduce((sum, t) => sum + (t.quantity * t.pricePerUnit), 0);
-  
-  const profit = totalIncome - totalExpenses;
-  const profitMargin = totalIncome > 0 ? ((profit / totalIncome) * 100) : 0;
+    return filteredTransactions.slice(startIndex, startIndex + itemsPerPage);
+  }, [filteredTransactions, currentPage]);
 
   // Colors for charts
   const COLORS = ['#1E3A8A', '#10B981', '#F59E0B', '#EF4444', '#8B5CF6'];

@@ -49,9 +49,9 @@ const DataEntry: React.FC = () => {
     }));
   }, [transactions]);
 
-  const handleSubmit = (e: React.FormEvent) => {
+  const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    
+
     if (!formData.item || !formData.quantity || !formData.pricePerUnit || !formData.entryType || !formData.category) {
       showError('Please fill in all required fields');
       return;
@@ -72,20 +72,52 @@ const DataEntry: React.FC = () => {
       date: format(formData.date, 'yyyy-MM-dd')
     };
 
-    setTransactions([newTransaction, ...transactions]);
-    
-    // Reset form
-    setFormData({
-      item: '',
-      quantity: '',
-      pricePerUnit: '',
-      entryType: '',
-      category: '',
-      customCategory: '',
-      date: new Date()
-    });
+    try {
+      const response = await fetch('/api/transactions', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify(newTransaction),
+      });
 
-    showSuccess('Transaction added successfully!');
+      if (response.ok) {
+        setTransactions([newTransaction, ...transactions]);
+        // Reset form
+        setFormData({
+          item: '',
+          quantity: '',
+          pricePerUnit: '',
+          entryType: '',
+          category: '',
+          customCategory: '',
+          date: new Date()
+        });
+
+        showSuccess('Transaction added successfully!');
+      } else {
+        throw new Error(await response.text());
+      }
+    } catch (err: any) {
+      console.error('Error creating transaction:', err);
+      // Parse detailed error message if available
+      let errorMessage = 'Failed to add transaction. Please try again.';
+      try {
+        // The error message is a JSON stringified object
+        const errorDetails = JSON.parse(err.message);
+        if (errorDetails.details && Array.isArray(errorDetails.details)) {
+          errorMessage = `Missing or invalid fields: ${errorDetails.details.join(', ')}`;
+        } else if (errorDetails.error) {
+          errorMessage = errorDetails.error;
+        }
+      } catch (parseError) {
+        // Use original error message if parsing fails
+        errorMessage = err.message || errorMessage;
+      }
+      showError(errorMessage);
+    } finally {
+      setLoading(false);
+    }
   };
 
   const handleInputChange = (field: string, value: any) => {

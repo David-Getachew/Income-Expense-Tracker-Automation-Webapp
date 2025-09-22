@@ -24,7 +24,7 @@ dist-ssr
 *.sw?
 
 
-//envs
+#envs
 .env.local
 .env
 .env-development

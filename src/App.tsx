@@ -6,7 +6,7 @@ import { BrowserRouter, Routes, Route, Navigate } from "react-router-dom";
 import { AuthProvider } from "@/contexts/AuthContext";
 import ProtectedRoute from "@/components/ProtectedRoute";
 import Dashboard from "./pages/Dashboard";
-import DataEntry from "./pages/DataEntry";
+// import DataEntry from "./pages/DataEntry";  // Removed for no-form-buffer branch
 import Reports from "./pages/Reports";
 import NotFound from "./pages/NotFound";
 
@@ -29,14 +29,7 @@ const App = () => (
                 </ProtectedRoute>
               } 
             />
-            <Route 
-              path="/data-entry" 
-              element={
-                <ProtectedRoute>
-                  <DataEntry />
-                </ProtectedRoute>
-              } 
-            />
+            {/* Removed DataEntry route for no-form-buffer branch */}
             <Route 
               path="/reports" 
               element={

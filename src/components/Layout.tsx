@@ -3,7 +3,7 @@ import { useAuth } from '@/contexts/AuthContext';
 import { Button } from '@/components/ui/button';
 import { 
   LayoutDashboard, 
-  PlusCircle, 
+  // PlusCircle,  // Removed for no-form-buffer branch
   FileText, 
   LogOut,
   Menu,
@@ -24,7 +24,7 @@ const Layout: React.FC<LayoutProps> = ({ children }) => {
 
   const navigation = [
     { name: 'Dashboard', href: '/dashboard', icon: LayoutDashboard },
-    { name: 'Data Entry', href: '/data-entry', icon: PlusCircle },
+    // { name: 'Data Entry', href: '/data-entry', icon: PlusCircle },  // Removed for no-form-buffer branch
     { name: 'Reports', href: '/reports', icon: FileText },
   ];
 

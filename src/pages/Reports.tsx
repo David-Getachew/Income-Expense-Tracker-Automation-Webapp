@@ -29,9 +29,10 @@ const Reports: React.FC = () => {
         ...report,
         weekStart: report.week_start,
         weekEnd: report.week_end,
-        netProfit: report.net_profit,
-        pdfUrl: report.pdf_url,
-        signedPdfUrl: report.signed_pdf_url || report.pdf_url
+        netProfit: report.net_profit || 0,
+        analysis: report.analysis || '',
+        pdfUrl: report.pdf_url || '',
+        signedPdfUrl: report.signed_pdf_url || report.pdf_url || ''
       }));
       setWeeklyReports(mappedReports);
     } catch (err: any) {

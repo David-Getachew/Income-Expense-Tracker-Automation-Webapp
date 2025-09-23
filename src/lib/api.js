@@ -183,7 +183,8 @@ export const getWeeklySummaries = async (start, end) => {
   queryParams.append('end', dateRange.end);
   
   const response = await apiRequest(`/weekly-summaries?${queryParams.toString()}`, { headers });
-  return response;
+  // Ensure we always return an array
+  return Array.isArray(response?.data) ? response.data : [];
 };
 
 // Analytics API

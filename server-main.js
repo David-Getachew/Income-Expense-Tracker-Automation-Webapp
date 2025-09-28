@@ -12,7 +12,7 @@ const __dirname = path.dirname(__filename);
 
 // Create express app
 const app = express();
-const PORT = process.env.PORT || 3000;
+const PORT = process.env.PORT || 3005;
 
 // Middleware
 app.use(express.json());

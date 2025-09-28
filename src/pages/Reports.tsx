@@ -21,24 +21,27 @@ const Reports: React.FC = () => {
     setLoading(true);
     setError(null);
     try {
-      const reports = await getWeeklySummaries();
-      // Ensure reports is an array before mapping
-      const reportsArray = Array.isArray(reports) ? reports : [];
-      // Map the reports to the correct format
+      const reportsArray = await getWeeklySummaries();
+      // getWeeklySummaries already returns a safe array
+      
+      // Map the reports to the correct format with safe fallbacks
       const mappedReports = reportsArray.map((report: any) => ({
         ...report,
-        weekStart: report.week_start,
-        weekEnd: report.week_end,
+        weekStart: report.week_start || '',
+        weekEnd: report.week_end || '',
         netProfit: report.net_profit || 0,
         analysis: report.analysis || '',
         pdfUrl: report.pdf_url || '',
-        signedPdfUrl: report.signed_pdf_url || report.pdf_url || ''
+        signedPdfUrl: report.signed_pdf_url || report.download_url || report.pdf_url || ''
       }));
+      
       setWeeklyReports(mappedReports);
     } catch (err: any) {
       console.error('Error fetching weekly reports:', err);
-      setError(err.message || 'Failed to load reports. Please try again.');
+      setError('Reports unavailable. Check server connection and try again.');
       showError('Failed to load reports');
+      // Set empty array to prevent crashes
+      setWeeklyReports([]);
     } finally {
       setLoading(false);
     }
@@ -47,11 +50,11 @@ const Reports: React.FC = () => {
   const handleDownload = async (report: any) => {
     try {
       // Use the signed PDF URL if available, otherwise use the regular PDF URL
-      const pdfUrl = report.signedPdfUrl || report.pdfUrl;
+      const pdfUrl = report.signedPdfUrl || report.download_url || report.pdfUrl;
       
       if (pdfUrl) {
-        // Open the PDF in a new tab
-        window.open(pdfUrl, '_blank');
+        // Open the PDF in a new tab with security attributes
+        window.open(pdfUrl, '_blank', 'noopener,noreferrer');
         showSuccess(`Opening report for ${report.weekStart} to ${report.weekEnd}`);
       } else {
         showError('No PDF available for this report');
@@ -75,8 +78,14 @@ const Reports: React.FC = () => {
   if (error) {
     return (
       <Layout>
-        <div className="flex justify-center items-center h-64">
-          <div className="text-lg text-red-500">{error}</div>
+        <div className="flex flex-col justify-center items-center h-64 space-y-4">
+          <div className="text-lg text-red-500 text-center">{error}</div>
+          <Button 
+            onClick={fetchWeeklyReports}
+            className="bg-blue-600 hover:bg-blue-700"
+          >
+            Retry
+          </Button>
         </div>
       </Layout>
     );
@@ -141,9 +150,10 @@ const Reports: React.FC = () => {
                 <Button 
                   onClick={() => handleDownload(report)}
                   className="w-full bg-blue-600 hover:bg-blue-700"
+                  disabled={!report.signedPdfUrl && !report.download_url && !report.pdfUrl}
                 >
                   <Download className="mr-2 h-4 w-4" />
-                  View PDF Report
+                  {report.signedPdfUrl || report.download_url || report.pdfUrl ? 'View PDF Report' : 'No Report'}
                 </Button>
               </CardContent>
             </Card>

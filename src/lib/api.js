@@ -2,12 +2,15 @@
 // API wrapper functions that replace mock data calls
 // This is the only file that should be modified in the frontend
 
-const API_BASE_URL = 'http://localhost:3005/api';
+// Use relative paths for same-origin requests
+const API_BASE_URL = '';
 
 // Helper function to make API requests with proper error handling
 const apiRequest = async (endpoint, options = {}) => {
   try {
-    const response = await fetch(`${API_BASE_URL}${endpoint}`, {
+    // Ensure endpoint starts with /
+    const url = endpoint.startsWith('/') ? endpoint : `/${endpoint}`;
+    const response = await fetch(`${API_BASE_URL}${url}`, {
       headers: {
         'Content-Type': 'application/json',
         ...options.headers,
@@ -15,14 +18,18 @@ const apiRequest = async (endpoint, options = {}) => {
       ...options,
     });
 
-    const data = await response.json();
-
     if (!response.ok) {
-      // Return more detailed error information
-      throw new Error(JSON.stringify(data) || `HTTP error! status: ${response.status}`);
+      let errorMessage;
+      try {
+        const errorData = await response.json();
+        errorMessage = errorData.error || errorData.message || `HTTP ${response.status}`;
+      } catch {
+        errorMessage = `HTTP ${response.status}: ${response.statusText}`;
+      }
+      throw new Error(errorMessage);
     }
 
-    return data;
+    return await response.json();
   } catch (error) {
     console.error(`API request failed for ${endpoint}:`, error);
     throw error;
@@ -80,7 +87,7 @@ export const getTransactions = async (filters = {}) => {
   });
 
   const queryString = queryParams.toString();
-  const url = `/transactions${queryString ? `?${queryString}` : ''}`;
+  const url = `/api/transactions${queryString ? `?${queryString}` : ''}`;
   
   const response = await apiRequest(url, { headers });
   // Ensure we always return the correct structure
@@ -88,19 +95,29 @@ export const getTransactions = async (filters = {}) => {
 };
 
 export const createTransaction = async (transactionData) => {
-  const token = getAuthToken();
-  const headers = {};
-  
-  if (token) {
-    headers['Authorization'] = `Bearer ${token}`;
+  try {
+    const token = getAuthToken();
+    const headers = {};
+    
+    if (token) {
+      headers['Authorization'] = `Bearer ${token}`;
+    }
+    
+    // Log the data being sent for debugging
+    console.log('Sending transaction data:', transactionData);
+    
+    const response = await apiRequest('/api/transactions', {
+      method: 'POST',
+      body: JSON.stringify(transactionData),
+      headers,
+    });
+    
+    console.log('Transaction API response:', response);
+    return response;
+  } catch (error) {
+    console.error('createTransaction failed:', error);
+    throw error;
   }
-  
-  const response = await apiRequest('/transactions', {
-    method: 'POST',
-    body: JSON.stringify(transactionData),
-    headers,
-  });
-  return response;
 };
 
 // Dashboard API
@@ -120,7 +137,7 @@ export const getDashboardData = async (start, end, granularity = 'auto') => {
   queryParams.append('end', dateRange.end);
   if (granularity) queryParams.append('granularity', granularity);
   
-  const response = await apiRequest(`/dashboard?${queryParams.toString()}`, { headers });
+  const response = await apiRequest(`/api/dashboard?${queryParams.toString()}`, { headers });
   // Handle the response format from the API
   // API returns array directly
   return Array.isArray(response) ? response : [];
@@ -142,7 +159,7 @@ export const getKpis = async (start, end) => {
   queryParams.append('start', dateRange.start);
   queryParams.append('end', dateRange.end);
   
-  const response = await apiRequest(`/kpis?${queryParams.toString()}`, { headers });
+  const response = await apiRequest(`/api/kpis?${queryParams.toString()}`, { headers });
   // Ensure we always return the correct structure with fallback values
   return response || { total_income: 0, total_expense: 0, net_income: 0 };
 };
@@ -168,23 +185,28 @@ export const getDailySummaries = async (start, end) => {
 };
 
 export const getWeeklySummaries = async (start, end) => {
-  const token = getAuthToken();
-  const headers = {};
-  
-  if (token) {
-    headers['Authorization'] = `Bearer ${token}`;
+  try {
+    const token = getAuthToken();
+    const headers = {};
+    
+    if (token) {
+      headers['Authorization'] = `Bearer ${token}`;
+    }
+    
+    // Ensure start and end are always provided
+    const dateRange = ensureDateRange(start, end);
+    
+    const queryParams = new URLSearchParams();
+    queryParams.append('start', dateRange.start);
+    queryParams.append('end', dateRange.end);
+    
+    const response = await apiRequest(`/api/weekly-summaries?${queryParams.toString()}`, { headers });
+    // Always return an array to prevent frontend crashes
+    return Array.isArray(response?.data) ? response.data : [];
+  } catch (error) {
+    console.error('getWeeklySummaries failed:', error);
+    return [];
   }
-  
-  // Ensure start and end are always provided
-  const dateRange = ensureDateRange(start, end);
-  
-  const queryParams = new URLSearchParams();
-  queryParams.append('start', dateRange.start);
-  queryParams.append('end', dateRange.end);
-  
-  const response = await apiRequest(`/weekly-summaries?${queryParams.toString()}`, { headers });
-  // Ensure we always return an array
-  return Array.isArray(response?.data) ? response.data : [];
 };
 
 // Analytics API
@@ -225,7 +247,7 @@ export const getTopRevenueItems = async (start, end, limit = 5) => {
   queryParams.append('end', dateRange.end);
   if (limit) queryParams.append('limit', limit);
   
-  const response = await apiRequest(`/top-revenue-items?${queryParams.toString()}`, { headers });
+  const response = await apiRequest(`/api/top-revenue-items?${queryParams.toString()}`, { headers });
   // Ensure we always return an array
   return Array.isArray(response) ? response : [];
 };
@@ -265,7 +287,7 @@ export const getExpensesByCategory = async (start, end) => {
   queryParams.append('start', dateRange.start);
   queryParams.append('end', dateRange.end);
   
-  const response = await apiRequest(`/expenses-by-category?${queryParams.toString()}`, { headers });
+  const response = await apiRequest(`/api/expenses-by-category?${queryParams.toString()}`, { headers });
   // Ensure we always return an array
   return Array.isArray(response) ? response : [];
 };

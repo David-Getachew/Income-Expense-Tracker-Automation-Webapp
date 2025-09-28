@@ -1,7 +1,7 @@
 // src/pages/api/transactions.js
 // API endpoint for transactions
 
-import { supabaseAdmin } from '../../lib/supabaseServer.js';
+import { supabaseAdmin } from '../../lib/supabaseClient.server.js';
 
 const isoDate = (d) => d.toISOString().slice(0,10);
 const defaultRange = () => {
@@ -97,7 +97,7 @@ export default async function handler(req, res) {
         item_type: itemType,
         category: category,
         date: date,
-        processed: body.processed ?? false
+        processed: false // Always set to false as required
       };
 
       const { data, error } = await supabaseAdmin.from('daily_income_expense').insert([payload]).select('*').limit(1);
